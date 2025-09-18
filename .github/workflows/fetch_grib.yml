@@ -1,0 +1,73 @@
+name: Fetch ICON-D2 GRIB2 and Generate PNGs
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 00z um 4:00 Lokalzeit (UTC+2)
+    - cron: '0 5 * * *'   # 03z um 7:00 Lokalzeit
+    - cron: '0 8 * * *'   # 06z um 10:00 Lokalzeit
+    - cron: '0 11 * * *'  # 09z um 13:00 Lokalzeit
+    - cron: '0 14 * * *'  # 12z um 16:00 Lokalzeit
+    - cron: '0 17 * * *'  # 15z um 19:00 Lokalzeit
+    - cron: '0 20 * * *'  # 18z um 22:00 Lokalzeit
+    - cron: '0 23 * * *'  # 21z um 01:00 Lokalzeit
+  workflow_dispatch:
+
+jobs:
+  fetch_and_generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install cfgrib xarray matplotlib cartopy geopandas shapely pandas
+
+      - name: Set fixed RUN based on cron
+        run: |
+          case "$(date -u +%H)" in
+            "02") echo "RUN=00" >> $GITHUB_ENV ;;
+            "05") echo "RUN=03" >> $GITHUB_ENV ;;
+            "08") echo "RUN=06" >> $GITHUB_ENV ;;
+            "11") echo "RUN=09" >> $GITHUB_ENV ;;
+            "14") echo "RUN=12" >> $GITHUB_ENV ;;
+            "17") echo "RUN=15" >> $GITHUB_ENV ;;
+            "20") echo "RUN=18" >> $GITHUB_ENV ;;
+            "23") echo "RUN=21" >> $GITHUB_ENV ;;
+          esac
+          DATE=$(date -u +%Y%m%d)
+          echo "DATE=$DATE" >> $GITHUB_ENV
+
+      - name: Clean all old runs
+        run: rm -rf pngs/* || true
+
+      - name: Download GRIB2 files
+        run: |
+          mkdir -p data
+          cd data
+          for i in $(seq -w 0 47); do
+            wget -O model_${i}.grib2.bz2 "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_t_2m.grib2.bz2"
+            bunzip2 -f model_${i}.grib2.bz2
+          done
+
+      - name: Generate PNGs
+        run: |
+          mkdir -p pngs/${{ env.RUN }}/t_2m
+          python scripts/generate_pngs.py data pngs/${{ env.RUN }}/t_2m
+
+      - name: Clean GRIB2 files
+        run: rm -rf data/*
+
+      - name: Commit PNGs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add pngs/${{ env.RUN }}/t_2m/*
+          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}"
+          git push
