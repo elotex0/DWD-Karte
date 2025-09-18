@@ -11,7 +11,7 @@ data_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
 # Lade Bundesländergrenzen
-bundeslaender = gpd.read_file("https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json")
+bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
 # Lade einige Städte in Deutschland
 cities = pd.DataFrame({
