@@ -52,8 +52,9 @@ jobs:
           mkdir -p data
           cd data
           for i in $(seq -w 0 47); do
-            wget -O model_${i}.grib2.bz2 "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_t_2m.grib2.bz2"
-            bunzip2 -f model_${i}.grib2.bz2
+            i_padded=$(printf "%03d" $i)
+            wget -O model_${i_padded}.grib2.bz2 "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_t_2m.grib2.bz2"
+            bunzip2 -f model_${i_padded}.grib2.bz2
           done
 
       - name: Generate PNGs
