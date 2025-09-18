@@ -10,10 +10,13 @@ import os
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
+# Ordner sicher erstellen
+os.makedirs(output_dir, exist_ok=True)
+
 # Lade Bundesländergrenzen
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
-# Lade einige Städte in Deutschland
+# Einige Städte in Deutschland
 cities = pd.DataFrame({
     'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf'],
     'lat': [52.52,53.55,48.14,50.94,50.11,51.05,48.78,51.23],
@@ -23,27 +26,33 @@ cities = pd.DataFrame({
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
+
     step = filename.split("_")[-1].split(".")[0]
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
+
+    # Prüfen ob 2D oder 3D
+    if len(t2m.shape) == 3:
+        t2m = t2m[0,:,:]
+
     lon = ds['longitude']
     lat = ds['latitude']
 
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
-    # Temperatur Colormap: blau=kalt, rot=heiß
+    # Temperatur Colormap
     im = ax.pcolormesh(lon, lat, t2m, cmap='coolwarm', shading='auto', vmin=-20, vmax=35)
 
-    # Bundesländergrenzen
+    # Bundesländer
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
 
-    # Städte einzeichnen
+    # Städte
     for idx, city in cities.iterrows():
         ax.plot(city['lon'], city['lat'], 'ko', markersize=4)
         ax.text(city['lon']+0.1, city['lat']+0.1, city['name'], fontsize=8)
 
-    # Küstenlinien und Ländergrenzen
+    # Küstenlinien & Ländergrenzen
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
@@ -53,5 +62,6 @@ for filename in sorted(os.listdir(data_dir)):
     # Titel
     ax.set_title(f"ICON-D2 2m Temperatur - Schritt {step}")
 
+    # Speichern
     plt.savefig(os.path.join(output_dir, f"output_{step}.png"), dpi=150)
     plt.close()

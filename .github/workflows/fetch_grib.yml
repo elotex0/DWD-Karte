@@ -44,7 +44,7 @@ jobs:
           DATE=$(date -u +%Y%m%d)
           echo "DATE=$DATE" >> $GITHUB_ENV
 
-      - name: Clean all old runs
+      - name: Clean old PNGs
         run: rm -rf pngs/* || true
 
       - name: Download GRIB2 files
@@ -52,9 +52,9 @@ jobs:
           mkdir -p data
           cd data
           for i in $(seq 0 47); do
-            i_padded=$(printf "%03d" $i)  # Dreistellige Step-Nummer: 0->000
+            i_padded=$(printf "%03d" $i)
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
-            wget -nc "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            wget -O model_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
             if [ -f "model_${i_padded}.grib2.bz2" ]; then
               bunzip2 -f model_${i_padded}.grib2.bz2
             fi
@@ -63,7 +63,7 @@ jobs:
       - name: Check downloaded files
         run: |
           if [ "$(ls -1 data/*.grib2 2>/dev/null | wc -l)" -eq 0 ]; then
-            echo "Keine GRIB2-Dateien gefunden, beende Job."
+            echo "Keine GRIB2-Dateien gefunden, Job beendet."
             exit 0
           fi
 
@@ -79,6 +79,10 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add pngs/${{ env.RUN }}/t_2m/*
-          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
-          git push
+          if [ -n "$(ls -A pngs/${{ env.RUN }}/t_2m 2>/dev/null)" ]; then
+            git add pngs/${{ env.RUN }}/t_2m/*
+            git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
+            git push
+          else
+            echo "Keine PNGs gefunden, Commit übersprungen."
+          fi
