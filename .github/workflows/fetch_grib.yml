@@ -51,11 +51,21 @@ jobs:
         run: |
           mkdir -p data
           cd data
-          for i in $(seq -w 0 47); do
-            i_padded=$(printf "%03d" $i)
-            wget -O model_${i_padded}.grib2.bz2 "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_t_2m.grib2.bz2"
-            bunzip2 -f model_${i_padded}.grib2.bz2
+          for i in $(seq 0 47); do
+            i_padded=$(printf "%03d" $i)  # Dreistellige Step-Nummer: 0->000
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
+            wget -nc "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "model_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f model_${i_padded}.grib2.bz2
+            fi
           done
+
+      - name: Check downloaded files
+        run: |
+          if [ "$(ls -1 data/*.grib2 2>/dev/null | wc -l)" -eq 0 ]; then
+            echo "Keine GRIB2-Dateien gefunden, beende Job."
+            exit 0
+          fi
 
       - name: Generate PNGs
         run: |
@@ -70,5 +80,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add pngs/${{ env.RUN }}/t_2m/*
-          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}"
+          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
