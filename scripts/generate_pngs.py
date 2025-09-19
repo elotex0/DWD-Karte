@@ -54,10 +54,10 @@ ww_categories = {
     "Regen stark": [55, 65, 82],
     "gef. Regen leicht": [66],
     "gef. Regen stark": [67],
-    "Schnee leicht": [71],
-    "Schnee mäßig": [73],
-    "Schnee stark": [75],
-    "Gewitter leicht/mäßig": [95],
+    "Schnee": [71],
+    "Schnee": [73],
+    "Schnee": [75],
+    "Gewitter leicht": [95],
     "Gewitter stark": [96]
 }
 
