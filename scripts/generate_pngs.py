@@ -66,48 +66,39 @@ germany_bounds = bundeslaender.total_bounds
 extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1]
 
 # Funktion für WW-Legende unterhalb der Karte
-def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
+def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
     legend_height = 0.08
     legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
     legend_ax.axis("off")
 
-    # Gesamtanzahl Kategorien mit vorhandenen Codes
-    categories_present = [(label, [c for c in codes if c in present_codes])
-                          for label, codes in ww_categories.items()
-                          if any(c in present_codes for c in codes)]
+    categories_present = [(label, codes) for label, codes in ww_categories.items()]
     n_categories = len(categories_present)
     if n_categories == 0:
         return
 
-    # Jeder Kategorieblock bekommt die gleiche Breite
     total_width = 1.0
     block_width = total_width / n_categories
-    gap = 0.02 * block_width  # kleiner Abstand innerhalb
+    gap = 0.02 * block_width
 
     for i, (label, codes_in_cat) in enumerate(categories_present):
-        if not codes_in_cat:
-            continue
-
-        # Bereich für diesen Block
         x0 = i * block_width
         x1 = (i + 1) * block_width
         block_inner_width = x1 - x0 - gap
 
-        # Unterteile den Block gleichmäßig in so viele Segmente wie Farben
         n_colors = len(codes_in_cat)
         color_width = block_inner_width / n_colors
 
-        # Zeichne die Farben nebeneinander
         for j, c in enumerate(codes_in_cat):
+            color = ww_colors_base.get(c, "#FFFFFF")  # fallback auf Weiß
             legend_ax.add_patch(
                 mpatches.Rectangle((x0 + j * color_width, 0.5),
                                    color_width, 0.5,
-                                   facecolor=ww_colors_base[c], edgecolor='black')
+                                   facecolor=color, edgecolor='black')
             )
 
-        # Kategoriename mittig unter dem Block
         legend_ax.text((x0 + x1) / 2, 0.25, label,
                        ha='center', va='center', fontsize=8)
+
         
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
