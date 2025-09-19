@@ -46,7 +46,7 @@ ww_labels = {
     0:"klar",1:"leicht bewölkt",2:"teilweise bewölkt",3:"bedeckt",
     45:"Nebel",48:"Nebel mit Reif",
     56:"Schneeregen leicht",57:"Schneeregen stark",
-    61:"Regen leicht",80:"Regen mäßig",80:"Regen stark",
+    61:"Regen leicht",80:"Regen stark",81:"Regen mäßig",
     66:"gef. Regen leicht",67:"gef. Regen stark",
     71:"Schnee leicht",73:"Schnee mäßig",75:"Schnee stark",
     95:"Gewitter leicht/mäßig",96:"Gewitter stark"
@@ -104,7 +104,10 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
+    # Figure + Axes transparent
     fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={"projection": ccrs.PlateCarree()})
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor("none")
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
@@ -112,19 +115,20 @@ for filename in sorted(os.listdir(data_dir)):
         # WW-Codes filtern
         valid_mask = np.isfinite(data)
         present_codes = np.unique(data[valid_mask]).astype(int).tolist()
-        present_codes = [c for c in present_codes if c not in ignore_codes and c in ww_colors_base]
+        present_codes = [c for c in present_codes if c in ww_colors_base]  # alle Codes in colors, ignore via NaN
         present_codes.sort()
-        print(f"{filename} - gefundene WW-Codes (gefiltert): {present_codes}")
+        print(f"{filename} - gefundene WW-Codes: {present_codes}")
 
         # Farben + Mapping
         colors = [ww_colors_base[c] for c in present_codes]
         cmap = ListedColormap(colors)
         code2idx = {code: i for i, code in enumerate(present_codes)}
 
-        # Index-Array (NaN für ignorierte Codes)
+        # Index-Array (ignorierte Codes = NaN → transparent)
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
-        for code, idx in code2idx.items():
-            idx_data[data == code] = idx
+        for code in present_codes:
+            mask = (data == code) & (code not in ignore_codes)
+            idx_data[mask] = code2idx[code]
 
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap,
                            vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
@@ -155,9 +159,9 @@ for filename in sorted(os.listdir(data_dir)):
     else:
         handles = []
         for code in present_codes:
+            if code in ignore_codes:
+                continue  # Ignorierte Codes nicht in Legende
             label = f"{code}: {ww_labels.get(code, '')}".strip()
-            if not label:
-                continue
             color = ww_colors_base.get(code, "grey")
             handles.append(mpatches.Patch(color=color, label=label))
         ax.legend(handles=handles, loc="lower center",
@@ -170,5 +174,5 @@ for filename in sorted(os.listdir(data_dir)):
     )
 
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
+    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight", transparent=True)
     plt.close()
