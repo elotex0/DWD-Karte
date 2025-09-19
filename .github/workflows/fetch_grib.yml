@@ -37,7 +37,7 @@ jobs:
             "02") echo "RUN=00" >> $GITHUB_ENV ;;
             "05") echo "RUN=03" >> $GITHUB_ENV ;;
             "08") echo "RUN=06" >> $GITHUB_ENV ;;
-            "13") echo "RUN=09" >> $GITHUB_ENV ;;
+            "12") echo "RUN=09" >> $GITHUB_ENV ;;
             "14") echo "RUN=12" >> $GITHUB_ENV ;;
             "17") echo "RUN=15" >> $GITHUB_ENV ;;
             "20") echo "RUN=18" >> $GITHUB_ENV ;;
@@ -53,7 +53,7 @@ jobs:
         run: |
           mkdir -p data/t2m
           cd data/t2m
-          for i in $(seq 0 1); do
+          for i in $(seq 0 47); do
             i_padded=$(printf "%03d" $i)
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
             wget -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
@@ -66,7 +66,7 @@ jobs:
         run: |
           mkdir -p data/ww
           cd data/ww
-          for i in $(seq 1 2); do
+          for i in $(seq 1 48); do
             i_padded=$(printf "%03d" $i)
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_ww.grib2.bz2"
             wget -O ww_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
