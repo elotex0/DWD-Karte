@@ -8,7 +8,6 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
-import re
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -25,7 +24,6 @@ cities = pd.DataFrame({
 })
 
 bounds = list(range(-30, 45, 5))
-
 colors = [
     "#001070", "#0020c2", "#0040ff", "#0080ff", "#00c0ff", "#00ffff",
     "#80ff80", "#c0ff00", "#ffff00", "#ffcc00", "#ff8000", "#ff4000",
@@ -48,12 +46,18 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
-    valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
-    valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
+    # Schrittzeit (step) in Stunden
+    step_hours = float(ds.step.values) if 'step' in ds else 0
 
-    # Modelllauf aus Dateiname extrahieren
-    match = re.search(r'\((\d{2})', filename)
-    lauf_str = match.group(1) + "z" if match else "??z"
+    # Valid time in UTC
+    valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
+
+    # Initial time = Modellstart
+    initial_time_utc = valid_time_utc - pd.Timedelta(hours=step_hours)
+    lauf_str = f"{initial_time_utc:%H}z"
+
+    # Local time (Berlin)
+    valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5, 16, 47, 56])
