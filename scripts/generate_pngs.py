@@ -7,18 +7,17 @@ import geopandas as gpd
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo  # für lokale Zeitzone
+from zoneinfo import ZoneInfo
 
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
-# Ordner sicher erstellen
 os.makedirs(output_dir, exist_ok=True)
 
-# Bundesländergrenzen laden
+# Bundesländergrenzen
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
-# Städte in Deutschland
+# Städte
 cities = pd.DataFrame({
     'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf',
              'Bremen','Kiel','Rostock','Mainz','Karlsruhe'],
@@ -26,29 +25,15 @@ cities = pd.DataFrame({
     'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78,8.80,10.13,12.10,8.27,8.40]
 })
 
-for filename in sorted(os.listdir(data_dir)):
-    if not filename.endswith(".grib2"):
-        continue
+# Feste Run-Zeit (21z = 21 UTC) für Testzwecke
+RUN_DATE = datetime.utcnow().date()
+RUN_HOUR = 21  # UTC
 
-    # Schritt (000-047)
-    step_str = filename.split("_")[-3]
-    step_hour = int(step_str)
+# Alle GRIB2-Dateien sortiert durchgehen
+grib_files = sorted([f for f in os.listdir(data_dir) if f.endswith(".grib2")])
+for idx, filename in enumerate(grib_files):
+    step_hour = idx  # 000,001,... entspricht 0h,1h,... nach Run
 
-    # Run-Datum und Run-Hour aus Dateiname extrahieren
-    parts = filename.split("_")
-    RUN_DATE = None
-    RUN_HOUR = None
-    for i, part in enumerate(parts):
-        if len(part) == 8 and part.isdigit():
-            RUN_DATE = datetime.strptime(part, "%Y%m%d")
-            RUN_HOUR = int(parts[i+1])
-            break
-
-    if RUN_DATE is None or RUN_HOUR is None:
-        print(f"Fehler beim Parsen des Dateinamens: {filename}")
-        continue
-
-    # Dataset laden
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
     if len(t2m.shape) == 3:
@@ -58,34 +43,29 @@ for filename in sorted(os.listdir(data_dir)):
     lat = ds['latitude']
 
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
-    ax.set_extent([5,16,47,56])  # Deutschland
+    ax.set_extent([5,16,47,56])
 
-    # Temperatur-Colormap kräftiger
+    # Kräftige Temperaturfarben
     im = ax.pcolormesh(lon, lat, t2m, cmap='RdYlBu_r', shading='auto', vmin=-20, vmax=35)
 
-    # Bundesländergrenzen
+    # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
-
-    # Städte einzeichnen
-    for idx, city in cities.iterrows():
+    for _, city in cities.iterrows():
         ax.plot(city['lon'], city['lat'], 'ko', markersize=4)
         ax.text(city['lon']+0.1, city['lat']+0.1, city['name'], fontsize=8)
 
-    # Küstenlinien & Ländergrenzen
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
     # Legende horizontal unten
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, label='Temperatur 2m [°C]')
 
-    # Forecast-Zeit berechnen in MEZ/MESZ
-    forecast_utc = RUN_DATE + timedelta(hours=RUN_HOUR + step_hour)
+    # Forecast-Zeit in lokale Zeit (MEZ/MESZ)
+    forecast_utc = datetime.combine(RUN_DATE, datetime.min.time()) + timedelta(hours=RUN_HOUR + step_hour)
     forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
     forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
 
-    # Titel mit Uhrzeit
     ax.set_title(f"ICON-D2 2m Temperatur - {forecast_str}")
 
-    # Speichern
-    plt.savefig(os.path.join(output_dir, f"output_{step_str}.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, f"output_{step_hour:03d}.png"), dpi=150)
     plt.close()
