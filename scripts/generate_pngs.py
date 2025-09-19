@@ -37,21 +37,31 @@ ww_colors_base = {
     56:"#FFA500", 57:"#FF8C00",
     51:"#90EE90", 53:"#32CD32", 55:"#006400",
     61:"#90EE90", 63:"#32CD32", 65:"#006400",
-    80:"#90EE90", 81:"#32CD32",
+    80:"#90EE90", 81:"#32CD32", 82:"#006400",
     66:"#FF6347", 67:"#8B0000",
     71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",
     95:"#FF77FF", 96:"#C71585"
 }
 
-# WW-Labels
-ww_labels = {
-    0:"klar",1:"leicht bewölkt",2:"teilweise bewölkt",3:"bedeckt",
-    45:"Nebel",48:"Nebel mit Reif",
-    56:"Schneeregen leicht",57:"Schneeregen stark",
-    61:"Regen leicht",63:"Regen mäßig",81:"Regen stark",
-    66:"gef. Regen leicht",67:"gef. Regen stark",
-    71:"Schnee leicht",73:"Schnee mäßig",75:"Schnee stark",
-    95:"Gewitter leicht/mäßig",96:"Gewitter stark"
+# Kategorien für die Legende: Beschreibung → Codes
+ww_categories = {
+    "klar": [0],
+    "leicht bewölkt": [1],
+    "teilweise bewölkt": [2],
+    "bedeckt": [3],
+    "Nebel": [45, 48],
+    "Schneeregen leicht": [56],
+    "Schneeregen stark": [57],
+    "Regen leicht": [51, 61, 80],
+    "Regen mäßig": [53, 63, 81],
+    "Regen stark": [55, 65, 82],
+    "gef. Regen leicht": [66],
+    "gef. Regen stark": [67],
+    "Schnee leicht": [71],
+    "Schnee mäßig": [73],
+    "Schnee stark": [75],
+    "Gewitter leicht/mäßig": [95],
+    "Gewitter stark": [96]
 }
 
 # Temperaturfarbskala
@@ -155,13 +165,16 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
+        # Legende nur nach Kategorie
         handles = []
-        for code in present_codes:
-            label = f"{code}: {ww_labels.get(code, '')}".strip()
-            if not label:
+        for label, codes in ww_categories.items():
+            # Prüfen, ob diese Kategorie im Datensatz vorkommt
+            if not any(c in present_codes for c in codes):
                 continue
-            color = ww_colors_base.get(code, "grey")
+            # Farbe des ersten gültigen Codes nehmen
+            color = ww_colors_base[next(c for c in codes if c in present_codes)]
             handles.append(mpatches.Patch(color=color, label=label))
+
         ax.legend(handles=handles, loc="lower center",
                   bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
 
