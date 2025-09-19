@@ -38,7 +38,7 @@ if var_type == "t2m":
     ]
     cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
-elif var_type == "ww":
+elif var_type == "WW":
     # Farben für WW-Karte (originale GRIB-Codes)
     ww_colors = {
         0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",
@@ -60,7 +60,7 @@ elif var_type == "ww":
         0: "klar/leicht bewölkt", 1: "bewölkt 1", 2: "bewölkt 2", 3: "bewölkt 3",
         45: "Fog", 48: "Fog Reifbildung",
         51: "Regen leicht", 61: "Regen mäßig", 63: "Regen stark",
-        65: "Gef. Regen hell", 66: "Gef. Regen dunkel",
+        65: "Gef. Regen leicht", 66: "Gef. Regen stark",
         56: "Schneeregen leicht", 57: "Schneeregen stark",
         71: "Schneefall leicht", 73: "Schneefall mäßig", 75: "Schneefall stark",
         95: "Gewitter leicht/mäßig", 96: "Gewitter stark"
@@ -123,7 +123,7 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Legende
     if var_type == "t2m":
-        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60, ticks=bound)
+        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60, ticks=bounds)
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=8)
     else:
