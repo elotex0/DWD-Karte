@@ -158,7 +158,7 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
 
         # WW-Legende unterhalb der Karte
-        add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base)
+        add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
