@@ -74,6 +74,10 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
+# Gemeinsame Kartenextent für Deutschland
+germany_bounds = bundeslaender.total_bounds
+extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1]
+
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
@@ -117,6 +121,7 @@ for filename in sorted(os.listdir(data_dir)):
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
     fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={"projection": ccrs.PlateCarree()})
+    ax.set_extent(extent)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
@@ -141,13 +146,6 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap,
                            vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
 
-    try:
-        germany_bounds = bundeslaender.total_bounds
-        ax.set_extent([germany_bounds[0]-1, germany_bounds[2]+1,
-                       germany_bounds[1]-1, germany_bounds[3]+1])
-    except Exception:
-        pass
-
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
 
     for _, city in cities.iterrows():
@@ -168,10 +166,8 @@ for filename in sorted(os.listdir(data_dir)):
         # Legende nur nach Kategorie
         handles = []
         for label, codes in ww_categories.items():
-            # Prüfen, ob diese Kategorie im Datensatz vorkommt
             if not any(c in present_codes for c in codes):
                 continue
-            # Farbe des ersten gültigen Codes nehmen
             color = ww_colors_base[next(c for c in codes if c in present_codes)]
             handles.append(mpatches.Patch(color=color, label=label))
 
