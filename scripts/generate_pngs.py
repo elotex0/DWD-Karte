@@ -64,7 +64,7 @@ for filename in sorted(os.listdir(data_dir)):
     if var_type == "t2m":
         data = ds['t2m'] - 273.15  # K → °C
     else:
-        data = ds['ww']
+        data = ds['WW']
 
     # Falls 3D-Feld → erste Zeitschicht nehmen
     if len(data.shape) == 3:
