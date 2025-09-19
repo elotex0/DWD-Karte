@@ -27,31 +27,40 @@ cities = pd.DataFrame({
     'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78]
 })
 
-# Deine Wunschfarben (nur die, die du festgelegt hast)
+# Codes, die ignoriert werden sollen
+ignore_codes = {51, 53, 55, 80, 81}
+
+# WW-Farben
 ww_colors_base = {
     0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",     # Bewölkung
     45:"#FFFF00", 48:"#FFD700",                               # Nebel
-    56:"#FFA500", 57:"#FF8C00",                               # Schneeregen (du hattest diese)
-    51:"#FFA07A", 53:"#FF8C69", 55:"#FF7043",                 # fallback für Nieselregen (eigene Wahl)
+    56:"#FFA500", 57:"#FF8C00",                               # Schneeregen
     61:"#90EE90", 63:"#32CD32", 65:"#006400",                # Regen
     66:"#FF6347", 67:"#8B0000",                               # gef. Regen
     71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",                # Schneefall
-    80:"#87CEFA", 81:"#4682B4",                              # Regenschauer (ergänzt)
     95:"#FF77FF", 96:"#C71585"                                # Gewitter
 }
 
-# Labeltexte (kurz) für Legende
+# WW-Labels
 ww_labels = {
     0:"klar",1:"leicht bewölkt",2:"teilweise bewölkt",3:"bedeckt",
     45:"Nebel",48:"Nebel mit Reif",
-    51:"Niesel leicht",53:"Niesel mäßig",55:"Niesel stark",
     56:"Schneeregen leicht",57:"Schneeregen stark",
     61:"Regen leicht",63:"Regen mäßig",65:"Regen stark",
     66:"gef. Regen leicht",67:"gef. Regen stark",
     71:"Schnee leicht",73:"Schnee mäßig",75:"Schnee stark",
-    80:"Schauer leicht",81:"Schauer mäßig",
     95:"Gewitter leicht/mäßig",96:"Gewitter stark"
 }
+
+# Temperaturfarbskala
+t2m_bounds = list(range(-30, 45, 5))
+t2m_colors = [
+    "#001070","#0020c2","#0040ff","#0080ff","#00c0ff","#00ffff",
+    "#80ff80","#c0ff00","#ffff00","#ffcc00","#ff8000","#ff4000",
+    "#ff0000","#990000"
+]
+t2m_cmap = mcolors.ListedColormap(t2m_colors)
+t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
@@ -60,100 +69,106 @@ for filename in sorted(os.listdir(data_dir)):
     path = os.path.join(data_dir, filename)
     ds = cfgrib.open_dataset(path)
 
-    # Variable finden (robust)
-    varname = None
-    if "WW" in ds:
-        varname = "WW"
-    elif "ww" in ds:
-        varname = "ww"
-    else:
-        # fallback: finde den DataVar-Namen, der 'WW' enthält (case-insensitive)
-        for vn in ds.data_vars:
-            if vn.lower() == "ww" or "weather" in vn.lower():
-                varname = vn
-                break
+    if var_type == "t2m":
+        if "t2m" not in ds:
+            print(f"Keine t2m-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
+            continue
+        data = ds["t2m"].values - 273.15  # Kelvin -> °C
+    else:  # var_type == "ww"
+        varname = None
+        if "WW" in ds:
+            varname = "WW"
+        elif "ww" in ds:
+            varname = "ww"
+        else:
+            for vn in ds.data_vars:
+                if vn.lower() == "ww" or "weather" in vn.lower():
+                    varname = vn
+                    break
 
-    if varname is None:
-        print(f"Keine WW-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
-        continue
+        if varname is None:
+            print(f"Keine WW-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
+            continue
 
-    data = ds[varname].values
-    # 3D -> erste Zeitschicht
+        data = ds[varname].values
+
     if data.ndim == 3:
         data = data[0, :, :]
 
-    lon = ds['longitude'].values
-    lat = ds['latitude'].values
+    lon = ds["longitude"].values
+    lat = ds["latitude"].values
 
-    # Bestimme alle echten Codes in der Datei (int)
-    valid_mask = np.isfinite(data)
-    present_codes = np.unique(data[valid_mask]).astype(int).tolist()
-    present_codes.sort()
-    print(f"{filename} - gefundene WW-Codes: {present_codes}")
-
-    # Baue Farb-Liste: verwende deine festen Farben, andere automatisch aus einer colormap
-    colors = []
-    codes_sorted = present_codes
-    # fallback colormap
-    fallback_cmap = plt.get_cmap("tab20")
-    fallback_i = 0
-    for code in codes_sorted:
-        if code in ww_colors_base:
-            colors.append(ww_colors_base[code])
-        else:
-            # nimm nächste Farbe aus fallback (hex)
-            colors.append(mcolors.to_hex(fallback_cmap(fallback_i)))
-            fallback_i += 1
-
-    cmap = ListedColormap(colors)
-
-    # Mapping code -> index (0..N-1)
-    code2idx = {code: i for i, code in enumerate(codes_sorted)}
-    # Erzeuge Index-Array
-    idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
-    for code, idx in code2idx.items():
-        idx_data[data == code] = idx
-
-    # Plot
-    run_time_utc = pd.to_datetime(ds['time'].values) if 'time' in ds else None
-    valid_time_utc = pd.to_datetime(ds.valid_time.values) if 'valid_time' in ds else None
+    run_time_utc = pd.to_datetime(ds["time"].values) if "time" in ds else None
+    valid_time_utc = pd.to_datetime(ds.valid_time.values) if "valid_time" in ds else None
     if isinstance(valid_time_utc, (np.ndarray, list)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    fig, ax = plt.subplots(figsize=(20,10), subplot_kw={'projection': ccrs.PlateCarree()})
+    fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={"projection": ccrs.PlateCarree()})
 
-    # Indizes so plotten, dass jede Indexnummer genau eine Farbe bekommt:
-    im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading='auto')
+    if var_type == "t2m":
+        im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
+    else:  # ww
+        # Codes extrahieren
+        valid_mask = np.isfinite(data)
+        present_codes = np.unique(data[valid_mask]).astype(int).tolist()
+        present_codes = [c for c in present_codes if c not in ignore_codes]
+        present_codes.sort()
+        print(f"{filename} - gefundene WW-Codes (gefiltert): {present_codes}")
 
-    germany_bounds = bundeslaender.total_bounds  # Achtung: evtl Tippfehler reparieren wenn variable anders heißt
+        # Farben + Mapping
+        colors = [ww_colors_base[c] for c in present_codes]
+        cmap = ListedColormap(colors)
+        code2idx = {code: i for i, code in enumerate(present_codes)}
+
+        # Index-Array bauen (ignorierte Codes bleiben NaN -> transparent)
+        idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
+        for code, idx in code2idx.items():
+            idx_data[data == code] = idx
+
+        im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap,
+                           vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
+
     try:
         germany_bounds = bundeslaender.total_bounds
-        ax.set_extent([germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1])
+        ax.set_extent([germany_bounds[0]-1, germany_bounds[2]+1,
+                       germany_bounds[1]-1, germany_bounds[3]+1])
     except Exception:
         pass
 
-    bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
+    bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
 
-    for idx_city, city in cities.iterrows():
-        ax.plot(city['lon'], city['lat'], 'ko', markersize=4)
-        ax.text(city['lon'] + 0.1, city['lat'] + 0.1, city['name'], fontsize=8)
+    for _, city in cities.iterrows():
+        ax.plot(city["lon"], city["lat"], "ko", markersize=4)
+        ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=8)
 
-    ax.add_feature(cfeature.BORDERS, linestyle=':')
+    ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende als farbige Patches
-    handles = []
-    labels = []
-    for code in codes_sorted:
-        color = colors[code2idx[code]]
-        label = f"{code}: {ww_labels.get(code, '')}".strip()
-        handles.append(mpatches.Patch(color=color, label=label))
-    # Platziere die Legende unter der Karte (anpassen ncol falls viele Einträge)
-    ax.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
+    if var_type == "t2m":
+        cbar = fig.colorbar(im, ax=ax, orientation="horizontal", pad=0.05, aspect=60)
+        cbar.set_ticks(list(range(-30, 45, 5)))
+        cbar.set_label("Temperatur 2m [°C]", color="black")
+        cbar.ax.tick_params(colors="black", labelsize=8)
+        cbar.outline.set_edgecolor("black")
+        cbar.ax.set_facecolor("white")
+    else:
+        handles = []
+        for code in present_codes:
+            label = f"{code}: {ww_labels.get(code, '')}".strip()
+            if not label:
+                continue
+            color = ww_colors_base.get(code, "grey")
+            handles.append(mpatches.Patch(color=color, label=label))
+        ax.legend(handles=handles, loc="lower center",
+                  bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
 
-    ax.set_title(f"ICON-D2 WW Vorhersage\nLauf: {pd.to_datetime(run_time_utc).hour if run_time_utc is not None else '??'}Z, gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)")
+    ax.set_title(
+        f"ICON-D2 {var_type.upper()} Vorhersage\n"
+        f"Lauf: {pd.to_datetime(run_time_utc).hour if run_time_utc is not None else '??'}Z, "
+        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)"
+    )
 
-    outname = f"ww_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
+    outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
     plt.close()
