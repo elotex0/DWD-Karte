@@ -115,42 +115,35 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur und Achsen erstellen
+    # Einheitliche Figur und Achsen
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.set_extent(extent)
-
-    # Anpassung der Achsen, um die Karte breiter zu machen
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.15)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.12)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-        # Farbleiste außerhalb der Karte platzieren, ähnlich der WW-Legende
-        cbar_ax = fig.add_axes([0.01, 0.05, 0.94, 0.03])  # [left, bottom, width, height]
+        cbar_ax = fig.add_axes([0.02, 0.06, 0.96, 0.03])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=8)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
-    else:
-        # WW-Codes filtern
+
+    else:  # WW
         valid_mask = np.isfinite(data)
         present_codes = np.unique(data[valid_mask]).astype(int).tolist()
         present_codes = [c for c in present_codes if c not in ignore_codes and c in ww_colors_base]
         present_codes.sort()
-        print(f"{filename} - gefundene WW-Codes (gefiltert): {present_codes}")
-        # Farben + Mapping
         colors = [ww_colors_base[c] for c in present_codes]
         cmap = ListedColormap(colors)
         code2idx = {code: i for i, code in enumerate(present_codes)}
-        # Index-Array (NaN für ignorierte Codes)
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
         for code, idx in code2idx.items():
             idx_data[data == code] = idx
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap,
                            vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
-        # Legende nur nach Kategorie
         handles = []
         for label, codes in ww_categories.items():
             if not any(c in present_codes for c in codes):
@@ -158,9 +151,9 @@ for filename in sorted(os.listdir(data_dir)):
             color = ww_colors_base[next(c for c in codes if c in present_codes)]
             handles.append(mpatches.Patch(color=color, label=label))
         ax.legend(handles=handles, loc="lower center",
-                  bbox_to_anchor=(0.5, -0.15), ncol=4, fontsize=8)
+                  bbox_to_anchor=(0.5, -0.08), ncol=4, fontsize=8)
 
-    # Bundesländer, Städte und Features hinzufügen
+    # Bundesländer, Städte, Grenzen
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
     for _, city in cities.iterrows():
         ax.plot(city["lon"], city["lat"], "ko", markersize=4)
