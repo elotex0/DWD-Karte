@@ -67,35 +67,33 @@ extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany
 
 # Funktion für WW-Legende unterhalb der Karte
 def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
-    codes_for_legend = []
-    labels_for_legend = []
-    colors_for_legend = []
+    legend_height = 0.08
+    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
+    legend_ax.axis("off")
+
+    # Position auf der X-Achse starten
+    x_start = 0
+    total_present = sum(len([c for c in codes if c in present_codes]) for codes in ww_categories.values())
+    if total_present == 0:
+        return
+    unit_width = 1 / total_present  # Breite eines Farbkästchens
 
     for label, codes in ww_categories.items():
         present_in_category = [c for c in codes if c in present_codes]
+        if not present_in_category:
+            continue
+
+        # Farben für diese Kategorie zeichnen
         for c in present_in_category:
-            codes_for_legend.append(c)
-            labels_for_legend.append(label)
-            colors_for_legend.append(ww_colors_base[c])
+            legend_ax.add_patch(
+                mpatches.Rectangle((x_start, 0.5), unit_width, 0.5,
+                                   facecolor=ww_colors_base[c], edgecolor='black')
+            )
+            x_start += unit_width
 
-    n = len(colors_for_legend)
-    if n == 0:
-        return
-
-    # Achse unterhalb der Karte
-    legend_height = 0.08
-    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])  # Unterhalb der Karte
-    legend_ax.set_xlim(0, n)
-    legend_ax.set_ylim(0, 2)
-    legend_ax.axis("off")
-
-    # Farbkästchen oben
-    for i, color in enumerate(colors_for_legend):
-        legend_ax.add_patch(mpatches.Rectangle((i, 1), 1, 1, facecolor=color, edgecolor='black'))
-
-    # Beschriftungen darunter
-    for i, label in enumerate(labels_for_legend):
-        legend_ax.text(i + 0.5, 0.5, label, ha='center', va='center', fontsize=8)
+        # Kategoriename zentriert über den Block
+        block_width = unit_width * len(present_in_category)
+        legend_ax.text(x_start - block_width/2, 0.25, label, ha='center', va='center', fontsize=8)
 
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
@@ -131,7 +129,7 @@ for filename in sorted(os.listdir(data_dir)):
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.set_extent(extent)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)  # Platz für WW-Legende
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
