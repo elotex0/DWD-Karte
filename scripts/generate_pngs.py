@@ -121,12 +121,12 @@ for filename in sorted(os.listdir(data_dir)):
     ax.set_extent(extent)
 
     # Anpassung der Achsen, um die Karte breiter zu machen
-    fig.subplots_adjust(left=0.05, right=0.95, top=0.90, bottom=0.15)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.15)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
         # Farbleiste außerhalb der Karte platzieren, ähnlich der WW-Legende
-        cbar_ax = fig.add_axes([0.1, 0.05, 0.8, 0.03])  # [left, bottom, width, height]
+        cbar_ax = fig.add_axes([0.01, 0.05, 0.94, 0.03])  # [left, bottom, width, height]
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
