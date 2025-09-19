@@ -45,7 +45,7 @@ ww_categories = {
     "Bewölkung": [0, 1 , 2, 3],
     "Nebel": [45, 48],
     "Schneeregen": [56, 57],
-    "Regen": [51, 61, 80, 53, 63, 81, 55, 65, 82],
+    "Regen": [51, 53, 55 ],
     "gefr. Regen": [66, 67],
     "Schnee": [71, 73, 75],
     "Gewitter": [95,96],
@@ -71,12 +71,15 @@ def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
     legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
     legend_ax.axis("off")
 
-    # Position auf der X-Achse starten
+    # Parameter für Abstände
     x_start = 0
-    total_present = sum(len([c for c in codes if c in present_codes]) for codes in ww_categories.values())
-    if total_present == 0:
+    gap = 0.01  # Abstand zwischen den Kategorien (in Einheiten 0..1)
+    total_width = 1 - gap * (len(ww_categories) - 1)  # Gesamtbreite ohne Lücken
+    # Berechne die Breite aller Farben insgesamt
+    n_colors_total = sum(len([c for c in codes if c in present_codes]) for codes in ww_categories.values())
+    if n_colors_total == 0:
         return
-    unit_width = 1 / total_present  # Breite eines Farbkästchens
+    unit_width = total_width / n_colors_total
 
     for label, codes in ww_categories.items():
         present_in_category = [c for c in codes if c in present_codes]
@@ -94,6 +97,9 @@ def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
         # Kategoriename zentriert über den Block
         block_width = unit_width * len(present_in_category)
         legend_ax.text(x_start - block_width/2, 0.25, label, ha='center', va='center', fontsize=8)
+
+        # Abstand zur nächsten Kategorie
+        x_start += gap
 
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
