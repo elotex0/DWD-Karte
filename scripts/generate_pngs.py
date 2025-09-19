@@ -6,6 +6,7 @@ import cartopy.feature as cfeature
 import geopandas as gpd
 import pandas as pd
 import os
+import matplotlib.colors as mcolors
 
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
@@ -23,11 +24,20 @@ cities = pd.DataFrame({
     'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78]
 })
 
+# DWD-ähnliche Farbskala
+colors = [
+    "#002aff", "#0055ff", "#00aaff", "#00ffaa", "#55ff00", 
+    "#aaff00", "#ffff00", "#ffcc00", "#ff8800", "#ff0000", 
+    "#cc0000", "#990000"
+]
+bounds = [-20,-15,-10,-5,0,5,10,15,20,25,30,35]
+cmap = mcolors.ListedColormap(colors)
+norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
 
-    step = filename.split("_")[-1].split(".")[0]
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
 
@@ -38,11 +48,14 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
+    # Zeitstempel aus Metadaten
+    valid_time = pd.to_datetime(ds.valid_time.values)
+
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
-    # Temperatur Colormap
-    im = ax.pcolormesh(lon, lat, t2m, cmap='coolwarm', shading='auto', vmin=-20, vmax=35)
+    # Temperaturkarte
+    im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
 
     # Bundesländer
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
@@ -56,12 +69,17 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende
-    cbar = fig.colorbar(im, ax=ax, orientation='vertical', label='Temperatur 2m [°C]')
+    # Legende unter der Karte mit dunklem Hintergrund
+    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=50)
+    cbar.set_label("Temperatur 2m [°C]", color="white")
+    cbar.ax.tick_params(colors="white")
+    cbar.outline.set_edgecolor("white")
+    cbar.ax.set_facecolor("black")
 
-    # Titel
-    ax.set_title(f"ICON-D2 2m Temperatur - Schritt {step}")
+    # Titel mit Vorhersagezeit
+    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time:%d.%m.%Y %H:%M} UTC")
 
     # Speichern
-    plt.savefig(os.path.join(output_dir, f"output_{step}.png"), dpi=150)
+    outname = f"output_{valid_time:%Y%m%d_%H%M}.png"
+    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
     plt.close()
