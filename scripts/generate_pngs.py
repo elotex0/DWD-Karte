@@ -42,23 +42,13 @@ ww_colors_base = {
 }
 
 ww_categories = {
-    "klar": [0],
-    "leicht bewölkt": [1],
-    "teilweise bewölkt": [2],
-    "bedeckt": [3],
+    "Bewölkung": [0, 1, 2, 3],
     "Nebel": [45, 48],
-    "Schneeregen leicht": [56],
-    "Schneeregen stark": [57],
-    "Regen leicht": [51, 61, 80],
-    "Regen mäßig": [53, 63, 81],
-    "Regen stark": [55, 65, 82],
-    "gef. Regen leicht": [66],
-    "gef. Regen stark": [67],
-    "Schnee": [71],
-    "Schnee": [73],
-    "Schnee": [75],
-    "Gewitter leicht": [95],
-    "Gewitter stark": [96]
+    "Schneeregen": [56, 57],
+    "Regen": [51, 53, 55, 61, 63, 65, 80, 81, 82],
+    "Gefr. Regen": [66, 67],
+    "Schnee": [71, 73, 75],
+    "Gewitter": [95, 96]
 }
 
 # Temperaturfarbskala
@@ -77,35 +67,36 @@ extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany
 
 # Funktion für WW-Legende unterhalb der Karte
 def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
-    codes_for_legend = []
-    labels_for_legend = []
-    colors_for_legend = []
-
+    legend_items = []
     for label, codes in ww_categories.items():
-        c = next((c for c in codes if c in present_codes), None)
-        if c is not None:
-            codes_for_legend.append(c)
-            labels_for_legend.append(label)
-            colors_for_legend.append(ww_colors_base[c])
+        valid_codes = [c for c in codes if c in present_codes]
+        if valid_codes:
+            legend_items.append((label, valid_codes))
 
-    n = len(colors_for_legend)
-    if n == 0:
+    if not legend_items:
         return
 
     # Achse unterhalb der Karte
     legend_height = 0.08
-    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])  # Unterhalb der Karte
-    legend_ax.set_xlim(0, n)
-    legend_ax.set_ylim(0, 2)
+    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
     legend_ax.axis("off")
 
-    # Farbkästchen oben
-    for i, color in enumerate(colors_for_legend):
-        legend_ax.add_patch(mpatches.Rectangle((i, 1), 1, 1, facecolor=color, edgecolor='black'))
+    block_width = 0.8  # Breite pro Farbrechteck
+    block_height = 1
+    spacing = 0.2
+    x = 0
 
-    # Beschriftungen darunter
-    for i, label in enumerate(labels_for_legend):
-        legend_ax.text(i + 0.5, 0.5, label, ha='center', va='center', fontsize=8)
+    for label, codes in legend_items:
+        for i, c in enumerate(codes):
+            legend_ax.add_patch(
+                mpatches.Rectangle(
+                    (x + i * block_width, 0.5), block_width, block_height,
+                    facecolor=ww_colors_base[c], edgecolor='black'
+                )
+            )
+        center = x + (len(codes) * block_width) / 2
+        legend_ax.text(center, 0.2, label, ha='center', va='center', fontsize=8)
+        x += len(codes) * block_width + spacing
 
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
@@ -141,7 +132,7 @@ for filename in sorted(os.listdir(data_dir)):
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.set_extent(extent)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)  # Platz für WW-Legende
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
