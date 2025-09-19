@@ -8,8 +8,6 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
-import numpy as np
-from shapely.geometry import Point
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -29,24 +27,13 @@ cities = pd.DataFrame({
 })
 
 # Temperaturbereiche von -30 bis +40 in 5°C Schritten
-bounds = list(range(-30, 45, 5))  # [-30, -25, ..., 40] → 15 Werte, 14 Intervalle
+bounds = list(range(-30, 45, 5))
 
-# Farbpalette (14 Farben, DWD-ähnlich)
+# Farbpalette (DWD-ähnlich)
 colors = [
-    "#001070",  # -30
-    "#0020c2",  # -25
-    "#0040ff",  # -20
-    "#0080ff",  # -15
-    "#00c0ff",  # -10
-    "#00ffff",  # -5
-    "#80ff80",  # 0
-    "#c0ff00",  # 5
-    "#ffff00",  # 10
-    "#ffcc00",  # 15
-    "#ff8000",  # 20
-    "#ff4000",  # 25
-    "#ff0000",  # 30
-    "#990000",  # 35–40
+    "#001070","#0020c2","#0040ff","#0080ff","#00c0ff","#00ffff",
+    "#80ff80","#c0ff00","#ffff00","#ffcc00","#ff8000","#ff4000",
+    "#ff0000","#990000"
 ]
 
 cmap = mcolors.ListedColormap(colors)
@@ -75,28 +62,22 @@ for filename in sorted(os.listdir(data_dir)):
     valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
     valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Größere Figur (Querformat, breiter)
+    # Figur erstellen
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
 
-    # Punkte für jedes Rasterpixel erzeugen
-    lon2d, lat2d = np.meshgrid(lon, lat)
-    points = np.array([lon2d.flatten(), lat2d.flatten()]).T
+    # Temperaturkarte plotten
+    im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
 
-    # Maske für Punkte außerhalb Deutschlands
-    mask = np.array([bundeslaender.contains(Point(x, y)).any() for x, y in points])
-    mask = mask.reshape(lon2d.shape)
-
-    # Temperatur maskieren
-    t2m_masked = np.where(mask, t2m, np.nan)
-
-    # Temperaturkarte nur über Deutschland
-    im = ax.pcolormesh(lon, lat, t2m_masked, cmap=cmap, norm=norm, shading='auto')
-
-    # Deutschland-Ausschnitt
+    # Deutschland + Nachbarländer automatisch als Ausschnitt
     germany_bounds = bundeslaender.total_bounds  # [minx, miny, maxx, maxy]
-    ax.set_extent([germany_bounds[0]-0.5, germany_bounds[2]+0.5, germany_bounds[1]-0.5, germany_bounds[3]+0.5])
+    ax.set_extent([
+        germany_bounds[0]-1,  # westlich
+        germany_bounds[2]+1,  # östlich
+        germany_bounds[1]-1,  # südlich
+        germany_bounds[3]+1   # nördlich
+    ])
 
-    # Bundesländer
+    # Bundesländergrenzen
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
 
     # Städte
@@ -108,20 +89,20 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende unter der Karte mit allen Ticks
+    # Legende
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60, ticks=bounds)
     cbar.set_label("Temperatur 2m [°C]", color="black")
     cbar.ax.tick_params(colors="black", labelsize=8)
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("white")
 
-    # Titel mit Laufzeit in UTC ("HHZ") und Vorhersagezeit lokal
+    # Titel
     ax.set_title(
         f"ICON-D2 2m Temperatur\nLauf: {run_hour_z}, "
-        f"Prognose für: {valid_time_local:%d.%m.%Y %H:%M} Uhr"
+        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)"
     )
 
-    # Speichern mit Vorhersagezeit im Dateinamen
+    # Speichern
     outname = f"output_{valid_time_utc:%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
     plt.close()
