@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p data
           cd data
-          for i in $(seq 0 47); do
+          for i in $(seq 0 1); do
             i_padded=$(printf "%03d" $i)
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
             wget -O model_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
