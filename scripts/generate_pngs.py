@@ -75,8 +75,8 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 germany_bounds = bundeslaender.total_bounds
 extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1]
 
-# Neue Funktion für schöne WW-Legende
-def add_ww_legend(fig, present_codes, ww_categories, ww_colors_base):
+# Neue Funktion für WW-Legende unterhalb der Karte
+def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
     codes_for_legend = []
     labels_for_legend = []
     colors_for_legend = []
@@ -92,18 +92,18 @@ def add_ww_legend(fig, present_codes, ww_categories, ww_colors_base):
     if n == 0:
         return
     
-    # Legende als neue Achse oberhalb der Karte
+    # Achse unterhalb der Karte
     legend_height = 0.06
-    legend_ax = fig.add_axes([0.1, 0.95, 0.8, legend_height])
+    legend_ax = fig.add_axes([0.1, 0.05, 0.8, legend_height])
     legend_ax.set_xlim(0, n)
     legend_ax.set_ylim(0, 2)
     legend_ax.axis("off")
     
-    # Farbkästchen
+    # Farbkästchen oben
     for i, color in enumerate(colors_for_legend):
         legend_ax.add_patch(mpatches.Rectangle((i, 1), 1, 1, facecolor=color, edgecolor='black'))
     
-    # Beschriftungen
+    # Beschriftungen darunter
     for i, label in enumerate(labels_for_legend):
         legend_ax.text(i + 0.5, 0.5, label, ha='center', va='center', fontsize=8)
 
@@ -165,8 +165,8 @@ for filename in sorted(os.listdir(data_dir)):
             idx_data[data == c] = i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
 
-        # Schöne WW-Legende mit Abstand oberhalb der Karte
-        add_ww_legend(fig, present_codes, ww_categories, ww_colors_base)
+        # WW-Legende unterhalb der Karte
+        add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base)
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
