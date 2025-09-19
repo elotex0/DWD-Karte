@@ -32,13 +32,13 @@ ignore_codes = {51, 53, 55, 80, 81}
 
 # WW-Farben
 ww_colors_base = {
-    0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",     # Bewölkung
-    45:"#FFFF00", 48:"#FFD700",                               # Nebel
-    56:"#FFA500", 57:"#FF8C00",                               # Schneeregen
-    61:"#90EE90", 63:"#32CD32", 65:"#006400",                # Regen
-    66:"#FF6347", 67:"#8B0000",                               # gef. Regen
-    71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",                # Schneefall
-    95:"#FF77FF", 96:"#C71585"                                # Gewitter
+    0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",
+    45:"#FFFF00", 48:"#FFD700",
+    56:"#FFA500", 57:"#FF8C00",
+    61:"#90EE90", 63:"#32CD32", 65:"#006400",
+    66:"#FF6347", 67:"#8B0000",
+    71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",
+    95:"#FF77FF", 96:"#C71585"
 }
 
 # WW-Labels
@@ -69,12 +69,13 @@ for filename in sorted(os.listdir(data_dir)):
     path = os.path.join(data_dir, filename)
     ds = cfgrib.open_dataset(path)
 
+    # Variable auswählen
     if var_type == "t2m":
         if "t2m" not in ds:
             print(f"Keine t2m-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
             continue
-        data = ds["t2m"].values - 273.15  # Kelvin -> °C
-    else:  # var_type == "ww"
+        data = ds["t2m"].values - 273.15  # Kelvin → °C
+    else:  # WW
         varname = None
         if "WW" in ds:
             varname = "WW"
@@ -85,7 +86,6 @@ for filename in sorted(os.listdir(data_dir)):
                 if vn.lower() == "ww" or "weather" in vn.lower():
                     varname = vn
                     break
-
         if varname is None:
             print(f"Keine WW-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
             continue
@@ -108,11 +108,11 @@ for filename in sorted(os.listdir(data_dir)):
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-    else:  # ww
-        # Codes extrahieren
+    else:
+        # WW-Codes filtern
         valid_mask = np.isfinite(data)
         present_codes = np.unique(data[valid_mask]).astype(int).tolist()
-        present_codes = [c for c in present_codes if c not in ignore_codes]
+        present_codes = [c for c in present_codes if c not in ignore_codes and c in ww_colors_base]
         present_codes.sort()
         print(f"{filename} - gefundene WW-Codes (gefiltert): {present_codes}")
 
@@ -121,7 +121,7 @@ for filename in sorted(os.listdir(data_dir)):
         cmap = ListedColormap(colors)
         code2idx = {code: i for i, code in enumerate(present_codes)}
 
-        # Index-Array bauen (ignorierte Codes bleiben NaN -> transparent)
+        # Index-Array (NaN für ignorierte Codes)
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
         for code, idx in code2idx.items():
             idx_data[data == code] = idx
