@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
+# Ordner sicher erstellen
 os.makedirs(output_dir, exist_ok=True)
 
 # Bundesländergrenzen laden
@@ -26,24 +27,38 @@ cities = pd.DataFrame({
 })
 
 # Temperaturbereiche von -30 bis +40 in 5°C Schritten
-bounds = list(range(-30, 45, 5))
+bounds = list(range(-30, 45, 5))  # [-30, -25, ..., 40] → 15 Werte, 14 Intervalle
 
-# Farbpalette (DWD-ähnlich)
+# Farbpalette (14 Farben, DWD-ähnlich)
 colors = [
-    "#001070", "#0020c2", "#0040ff", "#0080ff", "#00c0ff", "#00ffff",
-    "#80ff80", "#c0ff00", "#ffff00", "#ffcc00", "#ff8000", "#ff4000",
-    "#ff0000", "#990000",
+    "#001070",  # -30
+    "#0020c2",  # -25
+    "#0040ff",  # -20
+    "#0080ff",  # -15
+    "#00c0ff",  # -10
+    "#00ffff",  # -5
+    "#80ff80",  # 0
+    "#c0ff00",  # 5
+    "#ffff00",  # 10
+    "#ffcc00",  # 15
+    "#ff8000",  # 20
+    "#ff4000",  # 25
+    "#ff0000",  # 30
+    "#990000",  # 35–40
 ]
+
 cmap = mcolors.ListedColormap(colors)
 norm = mcolors.BoundaryNorm(bounds, cmap.N)
 
+# Loop über alle GRIB2-Dateien
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
 
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
-    t2m = ds['t2m'] - 273.15
+    t2m = ds['t2m'] - 273.15  # K → °C
 
+    # Falls 3D-Feld → erste Zeitschicht nehmen
     if len(t2m.shape) == 3:
         t2m = t2m[0, :, :]
 
@@ -54,21 +69,16 @@ for filename in sorted(os.listdir(data_dir)):
     valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
     valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Schrittzeit (step) korrekt auslesen
-    if 'step' in ds:
-        step_val = ds.step.values
-        if hasattr(step_val, 'astype'):
-            step_hours = step_val.astype('timedelta64[h]').item()
-        else:
-            step_hours = step_val / pd.Timedelta(hours=1)
+    # Forecast-Laufzeit (xxz)
+    if 'forecast_reference_time' in ds.coords:
+        initial_time_utc = pd.to_datetime(ds['forecast_reference_time'].values).tz_localize("UTC")
     else:
-        step_hours = 0
+        # fallback: erste Zeit in t2m-Koordinaten
+        initial_time_utc = pd.to_datetime(ds['time'].values[0]).tz_localize("UTC")
 
-    # Modellstartzeit (Lauf) berechnen
-    initial_time_utc = valid_time_utc - pd.Timedelta(hours=step_hours)
     lauf_str = f"{initial_time_utc.hour:02d}z"
 
-    # Große, breite Figur
+    # Figur
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5, 16, 47, 56])  # Deutschland
 
@@ -94,8 +104,8 @@ for filename in sorted(os.listdir(data_dir)):
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("white")
 
-    # Titel: Vorhersagezeit lokal + Modelllauf
-    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time_local:%d.%m.%Y %H:%M} Uhr ({lauf_str})")
+    # Titel mit Forecast-Lauf
+    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time_local:%d.%m.%Y %H:%M} ({lauf_str})")
 
     # Speichern mit UTC-Zeit im Dateinamen
     outname = f"output_{valid_time_utc:%Y%m%d_%H%M}.png"
