@@ -6,6 +6,8 @@ import cartopy.feature as cfeature
 import geopandas as gpd
 import pandas as pd
 import os
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo  # für Zeitzone
 
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
@@ -18,9 +20,10 @@ bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
 # Einige Städte in Deutschland
 cities = pd.DataFrame({
-    'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf'],
-    'lat': [52.52,53.55,48.14,50.94,50.11,51.05,48.78,51.23],
-    'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78]
+    'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf',
+             'Bremen','Kiel','Rostock','Mainz','Karlsruhe'],
+    'lat': [52.52,53.55,48.14,50.94,50.11,51.05,48.78,51.23,53.08,54.32,54.09,50.00,49.01],
+    'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78,8.80,10.13,12.10,8.27,8.40]
 })
 
 for filename in sorted(os.listdir(data_dir)):
@@ -31,7 +34,6 @@ for filename in sorted(os.listdir(data_dir)):
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
 
-    # Prüfen ob 2D oder 3D
     if len(t2m.shape) == 3:
         t2m = t2m[0,:,:]
 
@@ -41,8 +43,8 @@ for filename in sorted(os.listdir(data_dir)):
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
-    # Temperatur Colormap
-    im = ax.pcolormesh(lon, lat, t2m, cmap='coolwarm', shading='auto', vmin=-20, vmax=35)
+    # Temperatur Colormap kräftiger
+    im = ax.pcolormesh(lon, lat, t2m, cmap='RdYlBu_r', shading='auto', vmin=-20, vmax=35)
 
     # Bundesländer
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
@@ -56,11 +58,19 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende
-    cbar = fig.colorbar(im, ax=ax, orientation='vertical', label='Temperatur 2m [°C]')
+    # Legende unten
+    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, label='Temperatur 2m [°C]')
 
-    # Titel
-    ax.set_title(f"ICON-D2 2m Temperatur - Schritt {step}")
+    # Forecast-Zeit berechnen in MEZ/MESZ
+    RUN_HOUR = int(filename.split("_")[5][:2])  # aus DATE+RUN extrahieren
+    step_hour = int(step)
+    run_date = datetime.strptime(filename.split("_")[5][:8], "%Y%m%d")
+    forecast_utc = run_date + timedelta(hours=RUN_HOUR + 3 + step_hour)
+    forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
+    forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
+
+    # Titel mit Uhrzeit
+    ax.set_title(f"ICON-D2 2m Temperatur - {forecast_str}")
 
     # Speichern
     plt.savefig(os.path.join(output_dir, f"output_{step}.png"), dpi=150)
