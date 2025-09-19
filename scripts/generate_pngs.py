@@ -75,7 +75,7 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Größere Figur (Querformat, breiter)
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
-    ax.set_extent([2, 20, 46, 57])  # etwas breiterer Bereich um Deutschland
+    ax.set_extent([5,16,47,56])  # etwas breiterer Bereich um Deutschland
 
     # Temperaturkarte
     im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
