@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
+import matplotlib.patches as mpatches
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -39,14 +40,15 @@ if var_type == "t2m":
     cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
 elif var_type == "ww":
-    # WMO Wettercodes
+    # WMO Wettercodes angepasst, ohne ICON-D2 Gewitter (99)
     ww_colors = {
         0:"#FFFFFF",1:"#D3D3D3",2:"#A9A9A9",3:"#696969",   # Bewölkung
         45:"#FFD700",48:"#FFD700",                           # Nebel
-        51:"#ADD8E6",53:"#ADD8E6",55:"#ADD8E6",56:"#ADD8E6",57:"#ADD8E6", # leichter Regen
-        61:"#ADD8E6",63:"#ADD8E6",65:"#ADD8E6",66:"#ADD8E6",67:"#ADD8E6", # Regen
+        51:"#90EE90",53:"#90EE90",55:"#90EE90",56:"#FFA500",57:"#FF8C00", # leichter Regen / Schneeregen
+        61:"#90EE90",63:"#32CD32",65:"#006400",66:"#FF6347",67:"#8B0000", # Regen / gef. Regen
+        71:"#ADD8E6",73:"#6495ED",75:"#00008B",                 # Schneefall
         80:"#00008B",81:"#00008B",82:"#00008B",85:"#00008B",86:"#00008B", # Schauer
-        95:"#FF77FF",96:"#FF77FF", 99:"#8B008B"                            # Gewitter
+        95:"#FF77FF",96:"#C71585"                              # Gewitter
     }
     codes = list(ww_colors.keys())
     colors = [ww_colors[c] for c in codes]
@@ -109,16 +111,33 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.COASTLINE)
 
     # Legende
-    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60)
     if var_type == "t2m":
-        cbar.set_ticks(bounds)
+        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60)
+        cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
+        cbar.ax.tick_params(colors="black", labelsize=8)
+        cbar.outline.set_edgecolor("black")
+        cbar.ax.set_facecolor("white")
     else:
-        cbar.set_ticks(codes)
-        cbar.set_label("WMO Wettercode", color="black")
-    cbar.ax.tick_params(colors="black", labelsize=8)
-    cbar.outline.set_edgecolor("black")
-    cbar.ax.set_facecolor("white")
+        # Für WW Legende: farbige Blöcke
+        handles = [
+            mpatches.Patch(color="#FFFFFF", label="Bewölkung hell"),
+            mpatches.Patch(color="#D3D3D3", label="Bewölkung mittel"),
+            mpatches.Patch(color="#A9A9A9", label="Bewölkung dunkel"),
+            mpatches.Patch(color="#696969", label="Bewölkung sehr dunkel"),
+            mpatches.Patch(color="#FFD700", label="Nebel"),
+            mpatches.Patch(color="#90EE90", label="Leichter Regen"),
+            mpatches.Patch(color="#32CD32", label="Mäßiger Regen"),
+            mpatches.Patch(color="#006400", label="Starker Regen"),
+            mpatches.Patch(color="#FF6347", label="Leichter gef. Regen"),
+            mpatches.Patch(color="#8B0000", label="Starker gef. Regen"),
+            mpatches.Patch(color="#ADD8E6", label="Leichter Schneefall"),
+            mpatches.Patch(color="#6495ED", label="Mäßiger Schneefall"),
+            mpatches.Patch(color="#00008B", label="Starker Schneefall / Schauer"),
+            mpatches.Patch(color="#FF77FF", label="Gewitter leicht/mäßig"),
+            mpatches.Patch(color="#C71585", label="Gewitter stark")
+        ]
+        ax.legend(handles=handles, loc='lower left', fontsize=8, title="WW Legende")
 
     # Titel
     ax.set_title(
