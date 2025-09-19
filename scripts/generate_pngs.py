@@ -126,7 +126,7 @@ for filename in sorted(os.listdir(data_dir)):
     # Indizes so plotten, dass jede Indexnummer genau eine Farbe bekommt:
     im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading='auto')
 
-    germany_bounds = bund eslaender.total_bounds  # Achtung: evtl Tippfehler reparieren wenn variable anders heißt
+    germany_bounds = bundeslaender.total_bounds  # Achtung: evtl Tippfehler reparieren wenn variable anders heißt
     try:
         germany_bounds = bundeslaender.total_bounds
         ax.set_extent([germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1])
