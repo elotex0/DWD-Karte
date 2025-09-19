@@ -55,11 +55,13 @@ elif var_type == "ww":
         95: "#FF77FF",  # Gewitter leicht/mäßig hell pink
         96: "#C71585"   # Gewitter stark dunkel pink
     }
-    codes = list(ww_colors.keys())
+
+    # Codes **sortieren**, damit die Reihenfolge korrekt ist
+    codes = sorted(ww_colors.keys())
     colors = [ww_colors[c] for c in codes]
     cmap = mcolors.ListedColormap(colors)
-    norm = mcolors.BoundaryNorm(codes + [max(codes)+1], cmap.N)
-    # Beschriftungen für die Legende
+    
+    # Für WW brauchen wir keinen BoundaryNorm; wir nutzen discrete colors direkt
     legend_labels = {
         45: "Fog",
         48: "Fog Reifbildung",
