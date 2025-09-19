@@ -18,7 +18,7 @@ os.makedirs(output_dir, exist_ok=True)
 # Lade Bundesländergrenzen
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
-# Einige Städte in Deutschland
+# Städte in Deutschland
 cities = pd.DataFrame({
     'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf',
              'Bremen','Kiel','Rostock','Mainz','Karlsruhe'],
@@ -30,7 +30,6 @@ for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
 
-    step = filename.split("_")[-1].split(".")[0]
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
 
@@ -40,10 +39,20 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
+    # Forecast-Zeit aus Dateiname berechnen
+    parts = filename.split("_")
+    run_date = datetime.strptime(parts[4], "%Y%m%d")
+    run_hour = int(parts[5])
+    step_hour = int(parts[6])
+    forecast_utc = run_date + timedelta(hours=run_hour + step_hour)
+    forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
+    forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
+
+    # Plot
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
-    # Temperatur Colormap kräftiger
+    # Temperatur Colormap kräftig
     im = ax.pcolormesh(lon, lat, t2m, cmap='RdYlBu_r', shading='auto', vmin=-20, vmax=35)
 
     # Bundesländer
@@ -61,17 +70,9 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende unten
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, label='Temperatur 2m [°C]')
 
-    # Forecast-Zeit berechnen in MEZ/MESZ
-    RUN_HOUR = int(filename.split("_")[5][:2])  # aus DATE+RUN extrahieren
-    step_hour = int(step)
-    run_date = datetime.strptime(filename.split("_")[5][:8], "%Y%m%d")
-    forecast_utc = run_date + timedelta(hours=RUN_HOUR + 3 + step_hour)
-    forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
-    forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
-
-    # Titel mit Uhrzeit
+    # Titel mit Forecast-Zeit
     ax.set_title(f"ICON-D2 2m Temperatur - {forecast_str}")
 
     # Speichern
-    plt.savefig(os.path.join(output_dir, f"output_{step}.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, f"output_{parts[6]}.png"), dpi=150)
     plt.close()
