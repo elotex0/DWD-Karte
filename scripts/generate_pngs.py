@@ -67,13 +67,16 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Zeitstempel aus Metadaten
     valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
-    initial_time_utc = pd.to_datetime(ds.initial_time.values).tz_localize("UTC")
-
-    # Forecast-Lauf (z.B. 09z)
-    lauf_str = f"{initial_time_utc.hour:02d}z"
-
-    # Lokale Zeit für Anzeige auf der Karte
     valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
+
+    # Forecast-Laufzeit (xxz)
+    if 'forecast_reference_time' in ds.coords:
+        initial_time_utc = pd.to_datetime(ds['forecast_reference_time'].values).tz_localize("UTC")
+    else:
+        # fallback: erste Zeit in t2m-Koordinaten
+        initial_time_utc = pd.to_datetime(ds['time'].values[0]).tz_localize("UTC")
+
+    lauf_str = f"{initial_time_utc.hour:02d}z"
 
     # Figur
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
