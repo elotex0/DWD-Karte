@@ -26,7 +26,6 @@ cities = pd.DataFrame({
     'lon': [13.40, 9.99, 11.57, 6.96, 8.68, 13.73, 9.18, 6.78]
 })
 
-# Codes, die ignoriert werden sollen
 ignore_codes = {99}
 
 # WW-Farben
@@ -42,7 +41,6 @@ ww_colors_base = {
     95: "#FF77FF", 96: "#C71585"
 }
 
-# Kategorien für die Legende: Beschreibung → Codes
 ww_categories = {
     "klar": [0],
     "leicht bewölkt": [1],
@@ -88,8 +86,8 @@ for filename in sorted(os.listdir(data_dir)):
         if "t2m" not in ds:
             print(f"Keine t2m-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
             continue
-        data = ds["t2m"].values - 273.15  # Kelvin → °C
-    else:  # WW
+        data = ds["t2m"].values - 273.15
+    else:
         varname = None
         if "WW" in ds:
             varname = "WW"
@@ -115,45 +113,42 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Einheitliche Figur und Achsen
+    # Einheitliche Figur & Achse
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.set_extent(extent)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.12)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.12)
 
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-        cbar_ax = fig.add_axes([0.02, 0.06, 0.96, 0.03])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
+        cbar = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04)
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=8)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
 
-    else:  # WW
+    else:
         valid_mask = np.isfinite(data)
-        present_codes = np.unique(data[valid_mask]).astype(int).tolist()
-        present_codes = [c for c in present_codes if c not in ignore_codes and c in ww_colors_base]
+        present_codes = np.unique(data[valid_mask]).astype(int)
+        present_codes = [c for c in present_codes if c in ww_colors_base and c not in ignore_codes]
         present_codes.sort()
         colors = [ww_colors_base[c] for c in present_codes]
         cmap = ListedColormap(colors)
-        code2idx = {code: i for i, code in enumerate(present_codes)}
+        code2idx = {c: i for i, c in enumerate(present_codes)}
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
-        for code, idx in code2idx.items():
-            idx_data[data == code] = idx
-        im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap,
-                           vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
+        for c, i in code2idx.items():
+            idx_data[data == c] = i
+        im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
+
         handles = []
         for label, codes in ww_categories.items():
-            if not any(c in present_codes for c in codes):
-                continue
-            color = ww_colors_base[next(c for c in codes if c in present_codes)]
-            handles.append(mpatches.Patch(color=color, label=label))
-        ax.legend(handles=handles, loc="lower center",
-                  bbox_to_anchor=(0.5, -0.08), ncol=4, fontsize=8)
+            if any(c in present_codes for c in codes):
+                color = ww_colors_base[next(c for c in codes if c in present_codes)]
+                handles.append(mpatches.Patch(color=color, label=label))
+        ax.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, -0.06), ncol=4, fontsize=8)
 
-    # Bundesländer, Städte, Grenzen
+    # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
     for _, city in cities.iterrows():
         ax.plot(city["lon"], city["lat"], "ko", markersize=4)
@@ -161,14 +156,15 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Titel
+    # Titel mit festem Padding
     ax.set_title(
         f"ICON-D2 {var_type.upper()} Vorhersage\n"
         f"Lauf: {pd.to_datetime(run_time_utc).hour if run_time_utc is not None else '??'}Z, "
-        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)"
+        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)",
+        pad=20
     )
 
     # Ausgabe
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
+    plt.savefig(os.path.join(output_dir, outname), dpi=150)
     plt.close()
