@@ -8,6 +8,8 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
+import numpy as np
+from shapely.geometry import Point
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -62,8 +64,8 @@ for filename in sorted(os.listdir(data_dir)):
     if len(t2m.shape) == 3:
         t2m = t2m[0, :, :]
 
-    lon = ds['longitude']
-    lat = ds['latitude']
+    lon = ds['longitude'].values
+    lat = ds['latitude'].values
 
     # Modell-Laufzeit (forecast_reference_time) über die Koordinate 'time' in UTC
     run_time_utc = pd.to_datetime(ds['time'].values, unit='s', origin='unix')
@@ -75,10 +77,24 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Größere Figur (Querformat, breiter)
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
-    ax.set_extent([5,16,47,56])  # etwas breiterer Bereich um Deutschland
 
-    # Temperaturkarte
-    im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
+    # Punkte für jedes Rasterpixel erzeugen
+    lon2d, lat2d = np.meshgrid(lon, lat)
+    points = np.array([lon2d.flatten(), lat2d.flatten()]).T
+
+    # Maske für Punkte außerhalb Deutschlands
+    mask = np.array([bundeslaender.contains(Point(x, y)).any() for x, y in points])
+    mask = mask.reshape(lon2d.shape)
+
+    # Temperatur maskieren
+    t2m_masked = np.where(mask, t2m, np.nan)
+
+    # Temperaturkarte nur über Deutschland
+    im = ax.pcolormesh(lon, lat, t2m_masked, cmap=cmap, norm=norm, shading='auto')
+
+    # Deutschland-Ausschnitt
+    germany_bounds = bundeslaender.total_bounds  # [minx, miny, maxx, maxy]
+    ax.set_extent([germany_bounds[0]-0.5, germany_bounds[2]+0.5, germany_bounds[1]-0.5, germany_bounds[3]+0.5])
 
     # Bundesländer
     bundeslaender.boundary.plot(ax=ax, edgecolor='black', linewidth=1)
@@ -102,7 +118,7 @@ for filename in sorted(os.listdir(data_dir)):
     # Titel mit Laufzeit in UTC ("HHZ") und Vorhersagezeit lokal
     ax.set_title(
         f"ICON-D2 2m Temperatur\nLauf: {run_hour_z}, "
-        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)"
+        f"Prognose für: {valid_time_local:%d.%m.%Y %H:%M} Uhr"
     )
 
     # Speichern mit Vorhersagezeit im Dateinamen
