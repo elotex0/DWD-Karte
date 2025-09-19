@@ -8,7 +8,6 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
-from matplotlib.patches import Patch
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -31,6 +30,7 @@ cities = pd.DataFrame({
 if var_type == "t2m":
     # Temperaturbereiche von -30 bis +40 in 5°C Schritten
     bounds = list(range(-30, 45, 5))
+    # Farbpalette (DWD-ähnlich)
     colors = [
         "#001070","#0020c2","#0040ff","#0080ff","#00c0ff","#00ffff",
         "#80ff80","#c0ff00","#ffff00","#ffcc00","#ff8000","#ff4000",
@@ -38,33 +38,19 @@ if var_type == "t2m":
     ]
     cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
-elif var_type == "WW":
-    # Farben für WW-Karte (originale GRIB-Codes)
-    ww_colors = {
-        0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",
-        45:"#FFFF00", 48:"#FFD700",
-        51:"#90EE90", 61:"#32CD32", 63:"#228B22",
-        65:"#FF6347", 66:"#FF0000",
-        56:"#FFA500", 57:"#FF8C00",
-        71:"#ADD8E6", 73:"#87CEEB", 75:"#4682B4",
-        95:"#FF77FF", 96:"#C71585"
+elif var_type == "ww":
+    # WMO Wettercodes
+    ww_colors = { 
+        45:"#FFD700",48:"#FFD700",                           # Nebel
+        51:"#ADD8E6",53:"#ADD8E6",55:"#ADD8E6",56:"#ADD8E6",57:"#ADD8E6", # leichter Regen
+        61:"#ADD8E6",63:"#ADD8E6",65:"#ADD8E6",66:"#ADD8E6",67:"#ADD8E6", # Regen
+        80:"#00008B",81:"#00008B",82:"#00008B",85:"#00008B",86:"#00008B", # Schauer
+        95:"#FF77FF",96:"#FF77FF", 99:"#8B008B"                            # Gewitter
     }
-
-    codes = sorted(ww_colors.keys())
+    codes = list(ww_colors.keys())
     colors = [ww_colors[c] for c in codes]
     cmap = mcolors.ListedColormap(colors)
-    norm = mcolors.BoundaryNorm(codes + [max(codes)+1], cmap.N)
-
-    # Beschreibungen für die Legende
-    legend_labels = {
-        0: "klar/leicht bewölkt", 1: "bewölkt 1", 2: "bewölkt 2", 3: "bewölkt 3",
-        45: "Fog", 48: "Fog Reifbildung",
-        51: "Regen leicht", 61: "Regen mäßig", 63: "Regen stark",
-        65: "Gef. Regen leicht", 66: "Gef. Regen stark",
-        56: "Schneeregen leicht", 57: "Schneeregen stark",
-        71: "Schneefall leicht", 73: "Schneefall mäßig", 75: "Schneefall stark",
-        95: "Gewitter leicht/mäßig", 96: "Gewitter stark"
-    }
+    norm = None  # diskrete Farben direkt, kein BoundaryNorm nötig
 
 # Loop über alle GRIB2-Dateien
 for filename in sorted(os.listdir(data_dir)):
@@ -101,7 +87,7 @@ for filename in sorted(os.listdir(data_dir)):
     im = ax.pcolormesh(lon, lat, data, cmap=cmap, norm=norm, shading='auto')
 
     # Deutschland + Nachbarländer automatisch als Ausschnitt
-    germany_bounds = bundeslaender.total_bounds
+    germany_bounds = bundeslaender.total_bounds  # [minx, miny, maxx, maxy]
     ax.set_extent([
         germany_bounds[0]-1,
         germany_bounds[2]+1,
@@ -122,14 +108,41 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.COASTLINE)
 
     # Legende
+    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60)
     if var_type == "t2m":
-        cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60, ticks=bounds)
+        cbar.set_ticks(bounds)
         cbar.set_label("Temperatur 2m [°C]", color="black")
-        cbar.ax.tick_params(colors="black", labelsize=8)
     else:
-        legend_handles = [Patch(facecolor=ww_colors[c], edgecolor='black', label=legend_labels[c]) for c in codes]
-        ax.legend(handles=legend_handles, loc='lower center', bbox_to_anchor=(0.5, -0.15),
-                  ncol=4, fontsize=8, title="Wetterphänomene")
+        # Beschriftungen für die WMO-Codes
+        legend_labels = {
+            45: "Fog",
+            48: "Fog Reifbildung",
+            51: "Regen leicht",
+            53: "Regen leicht",
+            55: "Regen leicht",
+            56: "Schneeregen leicht",
+            57: "Schneeregen stark",
+            61: "Regen mäßig",
+            63: "Regen stark",
+            65: "Gef. Regen leicht", 
+            66: "Gef. Regen stark", 
+            67: "Regen stark",
+            80: "Schauer leicht",
+            81: "Schauer mäßig",
+            82: "Schauer stark",
+            85: "Schauer leicht",
+            86: "Schauer mäßig",
+            95: "Gewitter leicht/mäßig",
+            96: "Gewitter stark",
+            99: "Unbekannt"
+        }
+        # Tickpositionen mittig zwischen Farben
+        cbar.set_ticks([i + 0.5 for i in range(len(codes))])
+        cbar.set_ticklabels([legend_labels.get(c, str(c)) for c in codes])
+        cbar.set_label("WMO Wettercode", color="black")
+    cbar.ax.tick_params(colors="black", labelsize=8)
+    cbar.outline.set_edgecolor("black")
+    cbar.ax.set_facecolor("white")
 
     # Titel
     ax.set_title(
