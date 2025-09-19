@@ -45,7 +45,7 @@ ww_categories = {
     "Bewölkung": [0, 1 , 2, 3],
     "Nebel": [45, 48],
     "Schneeregen": [56, 57],
-    "Regen": [51, 53, 55 ],
+    "Regen": [51, 53, 55],
     "gefr. Regen": [66, 67],
     "Schnee": [71, 73, 75],
     "Gewitter": [95,96],
@@ -71,36 +71,44 @@ def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
     legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
     legend_ax.axis("off")
 
-    # Parameter für Abstände
-    x_start = 0
-    gap = 0.01  # Abstand zwischen den Kategorien (in Einheiten 0..1)
-    total_width = 1 - gap * (len(ww_categories) - 1)  # Gesamtbreite ohne Lücken
-    # Berechne die Breite aller Farben insgesamt
-    n_colors_total = sum(len([c for c in codes if c in present_codes]) for codes in ww_categories.values())
-    if n_colors_total == 0:
+    # Gesamtanzahl Kategorien mit vorhandenen Codes
+    categories_present = [(label, [c for c in codes if c in present_codes])
+                          for label, codes in ww_categories.items()
+                          if any(c in present_codes for c in codes)]
+    n_categories = len(categories_present)
+    if n_categories == 0:
         return
-    unit_width = total_width / n_colors_total
 
-    for label, codes in ww_categories.items():
-        present_in_category = [c for c in codes if c in present_codes]
-        if not present_in_category:
+    # Jeder Kategorieblock bekommt die gleiche Breite
+    total_width = 1.0
+    block_width = total_width / n_categories
+    gap = 0.02 * block_width  # kleiner Abstand innerhalb
+
+    for i, (label, codes_in_cat) in enumerate(categories_present):
+        if not codes_in_cat:
             continue
 
-        # Farben für diese Kategorie zeichnen
-        for c in present_in_category:
+        # Bereich für diesen Block
+        x0 = i * block_width
+        x1 = (i + 1) * block_width
+        block_inner_width = x1 - x0 - gap
+
+        # Unterteile den Block gleichmäßig in so viele Segmente wie Farben
+        n_colors = len(codes_in_cat)
+        color_width = block_inner_width / n_colors
+
+        # Zeichne die Farben nebeneinander
+        for j, c in enumerate(codes_in_cat):
             legend_ax.add_patch(
-                mpatches.Rectangle((x_start, 0.5), unit_width, 0.5,
+                mpatches.Rectangle((x0 + j * color_width, 0.5),
+                                   color_width, 0.5,
                                    facecolor=ww_colors_base[c], edgecolor='black')
             )
-            x_start += unit_width
 
-        # Kategoriename zentriert über den Block
-        block_width = unit_width * len(present_in_category)
-        legend_ax.text(x_start - block_width/2, 0.25, label, ha='center', va='center', fontsize=8)
-
-        # Abstand zur nächsten Kategorie
-        x_start += gap
-
+        # Kategoriename mittig unter dem Block
+        legend_ax.text((x0 + x1) / 2, 0.25, label,
+                       ha='center', va='center', fontsize=8)
+        
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
