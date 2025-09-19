@@ -28,7 +28,7 @@ cities = pd.DataFrame({
 })
 
 # Codes, die ignoriert werden sollen
-ignore_codes = {51, 53, 55}
+ignore_codes = {99}
 
 # WW-Farben
 ww_colors_base = {
