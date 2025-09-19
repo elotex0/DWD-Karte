@@ -34,7 +34,6 @@ jobs:
       - name: Set fixed RUN based on cron
         run: |
           case "$(date -u +%H)" in
-            "10") echo "RUN=06" >> $GITHUB_ENV ;;
             "02") echo "RUN=00" >> $GITHUB_ENV ;;
             "05") echo "RUN=03" >> $GITHUB_ENV ;;
             "08") echo "RUN=06" >> $GITHUB_ENV ;;
