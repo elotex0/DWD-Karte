@@ -17,8 +17,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout Repo with PAT
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -82,9 +84,7 @@ jobs:
           if [ -n "$(ls -A pngs/${{ env.RUN }}/t_2m 2>/dev/null)" ]; then
             git add pngs/${{ env.RUN }}/t_2m/*
             git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
-            # Push über HTTPS mit PAT
-            git push https://x-access-token:${{ secrets.GH_PAT }}@github.com/elotex0/DWD-Karte.git HEAD:main
+            git push
           else
             echo "Keine PNGs gefunden, Commit übersprungen."
           fi
-
