@@ -28,14 +28,14 @@ cities = pd.DataFrame({
 })
 
 # Codes, die ignoriert werden sollen
-ignore_codes = {51, 53, 55, 63}
+ignore_codes = {80, 82, 51, 53, 55}
 
 # WW-Farben
 ww_colors_base = {
     0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",
     45:"#FFFF00", 48:"#FFD700",
     56:"#FFA500", 57:"#FF8C00",
-    61:"#90EE90", 80:"#32CD32", 81:"#006400",
+    61:"#90EE90", 63:"#32CD32", 81:"#006400",
     66:"#FF6347", 67:"#8B0000",
     71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",
     95:"#FF77FF", 96:"#C71585"
@@ -46,7 +46,7 @@ ww_labels = {
     0:"klar",1:"leicht bewölkt",2:"teilweise bewölkt",3:"bedeckt",
     45:"Nebel",48:"Nebel mit Reif",
     56:"Schneeregen leicht",57:"Schneeregen stark",
-    61:"Regen leicht",80:"Regen mäßig",80:"Regen stark",
+    61:"Regen leicht",63:"Regen mäßig",81:"Regen stark",
     66:"gef. Regen leicht",67:"gef. Regen stark",
     71:"Schnee leicht",73:"Schnee mäßig",75:"Schnee stark",
     95:"Gewitter leicht/mäßig",96:"Gewitter stark"
