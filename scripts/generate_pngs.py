@@ -65,22 +65,13 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
-    # Zeitstempel aus Metadaten
+    # Zeitstempel aus Metadaten (UTC → Europe/Berlin für Anzeige)
     valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
     valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Forecast-Laufzeit (xxz)
-    if 'forecast_reference_time' in ds.coords:
-        initial_time_utc = pd.to_datetime(ds['forecast_reference_time'].values).tz_localize("UTC")
-    else:
-        # fallback: erste Zeit in t2m-Koordinaten
-        initial_time_utc = pd.to_datetime(ds['time'].values[0]).tz_localize("UTC")
-
-    lauf_str = f"{initial_time_utc.hour:02d}z"
-
-    # Figur
+    # Größere Figur (Querformat, breiter)
     fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
-    ax.set_extent([5, 16, 47, 56])  # Deutschland
+    ax.set_extent([2, 20, 46, 57])  # etwas breiterer Bereich um Deutschland
 
     # Temperaturkarte
     im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
@@ -97,15 +88,15 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende unter der Karte
+    # Legende unter der Karte mit allen Ticks
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60, ticks=bounds)
     cbar.set_label("Temperatur 2m [°C]", color="black")
     cbar.ax.tick_params(colors="black", labelsize=8)
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("white")
 
-    # Titel mit Forecast-Lauf
-    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time_local:%d.%m.%Y %H:%M} ({lauf_str})")
+    # Titel mit deutscher Zeit
+    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)")
 
     # Speichern mit UTC-Zeit im Dateinamen
     outname = f"output_{valid_time_utc:%Y%m%d_%H%M}.png"
