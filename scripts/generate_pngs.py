@@ -8,7 +8,8 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 from zoneinfo import ZoneInfo
-import matplotlib.patches as mpatches
+import numpy as np
+from matplotlib.colors import ListedColormap
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -40,19 +41,19 @@ if var_type == "t2m":
     cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
 elif var_type == "ww":
-    # WMO Wettercodes angepasst, ohne ICON-D2 Gewitter (99)
+    # WW-Codes exakt nach Vorgabe, ohne zusätzliche Codes
     ww_colors = {
-        0:"#FFFFFF",1:"#D3D3D3",2:"#A9A9A9",3:"#696969",   # Bewölkung
-        45:"#FFD700",48:"#FFD700",                           # Nebel
-        51:"#90EE90",53:"#90EE90",55:"#90EE90",56:"#FFA500",57:"#FF8C00", # leichter Regen / Schneeregen
-        61:"#90EE90",63:"#32CD32",65:"#006400",66:"#FF6347",67:"#8B0000", # Regen / gef. Regen
-        71:"#ADD8E6",73:"#6495ED",75:"#00008B",                 # Schneefall
-        80:"#00008B",81:"#00008B",82:"#00008B",85:"#00008B",86:"#00008B", # Schauer
-        95:"#FF77FF",96:"#C71585"                              # Gewitter
+        0:"#FFFFFF", 1:"#D3D3D3", 2:"#A9A9A9", 3:"#696969",     # Bewölkung
+        45:"#FFFF00", 48:"#FFD700",                               # Nebel
+        56:"#FFA500", 57:"#FF8C00",                               # Schneeregen
+        61:"#90EE90", 63:"#32CD32", 65:"#006400",                # Regen
+        66:"#FF6347", 67:"#8B0000",                               # gef. Regen
+        71:"#ADD8E6", 73:"#6495ED", 75:"#00008B",                # Schneefall
+        95:"#FF77FF", 96:"#C71585"                                # Gewitter
     }
     codes = list(ww_colors.keys())
     colors = [ww_colors[c] for c in codes]
-    cmap = mcolors.ListedColormap(colors)
+    cmap = ListedColormap(colors)
     norm = mcolors.BoundaryNorm(codes + [max(codes)+1], cmap.N)
 
 # Loop über alle GRIB2-Dateien
@@ -110,8 +111,8 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende
     if var_type == "t2m":
+        # Farbbar für Temperatur
         cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=60)
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
@@ -119,25 +120,28 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
-        # Für WW Legende: farbige Blöcke
-        handles = [
-            mpatches.Patch(color="#FFFFFF", label="Bewölkung hell"),
-            mpatches.Patch(color="#D3D3D3", label="Bewölkung mittel"),
-            mpatches.Patch(color="#A9A9A9", label="Bewölkung dunkel"),
-            mpatches.Patch(color="#696969", label="Bewölkung sehr dunkel"),
-            mpatches.Patch(color="#FFD700", label="Nebel"),
-            mpatches.Patch(color="#90EE90", label="Leichter Regen"),
-            mpatches.Patch(color="#32CD32", label="Mäßiger Regen"),
-            mpatches.Patch(color="#006400", label="Starker Regen"),
-            mpatches.Patch(color="#FF6347", label="Leichter gef. Regen"),
-            mpatches.Patch(color="#8B0000", label="Starker gef. Regen"),
-            mpatches.Patch(color="#ADD8E6", label="Leichter Schneefall"),
-            mpatches.Patch(color="#6495ED", label="Mäßiger Schneefall"),
-            mpatches.Patch(color="#00008B", label="Starker Schneefall / Schauer"),
-            mpatches.Patch(color="#FF77FF", label="Gewitter leicht/mäßig"),
-            mpatches.Patch(color="#C71585", label="Gewitter stark")
+        # Legende WW: Blöcke horizontal unten, Labels darunter
+        legend_colors = [ww_colors[c] for c in codes]
+        legend_labels = [
+            "0","1","2","3",
+            "45 Fog gelb","48 Fog Reifbildung gold",
+            "56 Schneeregen leicht helles orange","57 Schneeregen mäßig/stark dunkles orange",
+            "61 Regen leicht hellgrün","63 Regen Mäßig mittelgrün","65 Regen Stark dunkelgrün",
+            "66 gef. Regen hell rot","67 gef. Regen dunkel rot",
+            "71 Schneefall leicht hell blau","73 Schneefall Mäßig bissel dunkleres blau","75 Schneefall Stark dunkle blau",
+            "95 Gewitter leicht/mäßig helles pink","96 Gewitter stark dunkles pink"
         ]
-        ax.legend(handles=handles, loc='lower left', fontsize=8, title="WW Legende")
+
+        n = len(legend_colors)
+        ax_legend = fig.add_axes([0.1, 0.05, 0.8, 0.03])  # x, y, width, height
+        gradient = np.linspace(0, 1, n)
+        gradient = np.vstack((gradient, gradient))
+        cmap_legend = ListedColormap(legend_colors)
+        ax_legend.imshow(gradient, aspect='auto', cmap=cmap_legend)
+        ax_legend.set_xticks(np.arange(n))
+        ax_legend.set_xticklabels(legend_labels, rotation=45, ha='right', fontsize=8)
+        ax_legend.set_yticks([])
+        ax_legend.set_frame_on(False)
 
     # Titel
     ax.set_title(
