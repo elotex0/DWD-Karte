@@ -71,12 +71,12 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Gemeinsame Kartenextent für Deutschland
+# Kartenextent für Deutschland
 germany_bounds = bundeslaender.total_bounds
 extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1]
 
-# Funktion für kompakte WW-Legende (Farben oben, Beschriftung darunter)
-def add_ww_legend(ax, present_codes, ww_categories, ww_colors_base):
+# Neue Funktion für schöne WW-Legende
+def add_ww_legend(fig, present_codes, ww_categories, ww_colors_base):
     codes_for_legend = []
     labels_for_legend = []
     colors_for_legend = []
@@ -92,47 +92,38 @@ def add_ww_legend(ax, present_codes, ww_categories, ww_colors_base):
     if n == 0:
         return
     
-    # Legende als kleine Achse oben innerhalb der Karte
-    legend_height = 0.04
-    bbox = [0.1, 0.92, 0.8, legend_height]  # [left, bottom, width, height]
-    legend_ax = ax.figure.add_axes(bbox)
+    # Legende als neue Achse oberhalb der Karte
+    legend_height = 0.06
+    legend_ax = fig.add_axes([0.1, 0.95, 0.8, legend_height])
     legend_ax.set_xlim(0, n)
     legend_ax.set_ylim(0, 2)
     legend_ax.axis("off")
     
-    # Farben oben
+    # Farbkästchen
     for i, color in enumerate(colors_for_legend):
         legend_ax.add_patch(mpatches.Rectangle((i, 1), 1, 1, facecolor=color, edgecolor='black'))
     
-    # Beschriftungen darunter
+    # Beschriftungen
     for i, label in enumerate(labels_for_legend):
         legend_ax.text(i + 0.5, 0.5, label, ha='center', va='center', fontsize=8)
 
+# Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
     path = os.path.join(data_dir, filename)
     ds = cfgrib.open_dataset(path)
 
-    # Variable auswählen
+    # Daten aus GRIB
     if var_type == "t2m":
         if "t2m" not in ds:
-            print(f"Keine t2m-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
+            print(f"Keine t2m-Variable in {filename}")
             continue
         data = ds["t2m"].values - 273.15
     else:
-        varname = None
-        if "WW" in ds:
-            varname = "WW"
-        elif "ww" in ds:
-            varname = "ww"
-        else:
-            for vn in ds.data_vars:
-                if vn.lower() == "ww" or "weather" in vn.lower():
-                    varname = vn
-                    break
+        varname = next((vn for vn in ds.data_vars if vn.lower() in ["ww", "weather"]), None)
         if varname is None:
-            print(f"Keine WW-Variable in {filename} gefunden. Variablen: {list(ds.data_vars)}")
+            print(f"Keine WW-Variable in {filename}")
             continue
         data = ds[varname].values
 
@@ -146,7 +137,7 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Einheitliche Figur & Achse
+    # Figur & Achse
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
     ax.set_extent(extent)
@@ -174,8 +165,8 @@ for filename in sorted(os.listdir(data_dir)):
             idx_data[data == c] = i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
 
-        # Kompakte Legende oben
-        add_ww_legend(ax, present_codes, ww_categories, ww_colors_base)
+        # Schöne WW-Legende mit Abstand oberhalb der Karte
+        add_ww_legend(fig, present_codes, ww_categories, ww_colors_base)
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -185,7 +176,7 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Titel mit festem Padding
+    # Titel
     ax.set_title(
         f"ICON-D2 {var_type.upper()} Vorhersage\n"
         f"Lauf: {pd.to_datetime(run_time_utc).hour if run_time_utc is not None else '??'}Z, "
@@ -193,7 +184,7 @@ for filename in sorted(os.listdir(data_dir)):
         pad=20
     )
 
-    # Ausgabe
+    # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    plt.savefig(os.path.join(output_dir, outname), dpi=150)
+    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches='tight')
     plt.close()
