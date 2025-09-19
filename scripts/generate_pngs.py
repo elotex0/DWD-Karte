@@ -65,11 +65,11 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
-    # Modell-Laufzeit (forecast_reference_time)
-    run_time_utc = pd.to_datetime(ds.forecast_reference_time.values, unit='s', origin='unix').tz_localize("UTC")
-    run_time_local = run_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
+    # Modell-Laufzeit (forecast_reference_time) über die Koordinate 'time' in UTC
+    run_time_utc = pd.to_datetime(ds['time'].values, unit='s', origin='unix')
+    run_hour_z = f"{run_time_utc.hour:02d}Z"
 
-    # Vorhersagezeit (valid_time)
+    # Vorhersagezeit (valid_time) lokal in Berlin
     valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
     valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
@@ -99,9 +99,9 @@ for filename in sorted(os.listdir(data_dir)):
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("white")
 
-    # Titel mit Laufzeit und Vorhersagezeit
+    # Titel mit Laufzeit in UTC ("HHZ") und Vorhersagezeit lokal
     ax.set_title(
-        f"ICON-D2 2m Temperatur\nLauf: {run_time_local:%d.%m.%Y %H:%M} Uhr, "
+        f"ICON-D2 2m Temperatur\nLauf: {run_hour_z}, "
         f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)"
     )
 
