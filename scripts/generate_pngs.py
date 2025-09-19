@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 import matplotlib.colors as mcolors
+from zoneinfo import ZoneInfo
 
 # Eingabe-/Ausgabe-Verzeichnisse
 data_dir = sys.argv[1]
@@ -64,12 +65,13 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds['longitude']
     lat = ds['latitude']
 
-    # Zeitstempel aus Metadaten
-    valid_time = pd.to_datetime(ds.valid_time.values)
+    # Zeitstempel aus Metadaten (UTC → Europe/Berlin für Anzeige)
+    valid_time_utc = pd.to_datetime(ds.valid_time.values).tz_localize("UTC")
+    valid_time_local = valid_time_utc.astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Größere Figur (Querformat)
-    fig, ax = plt.subplots(figsize=(18, 10), subplot_kw={'projection': ccrs.PlateCarree()})
-    ax.set_extent([5, 16, 47, 56])  # Deutschland
+    # Größere Figur (Querformat, breiter)
+    fig, ax = plt.subplots(figsize=(20, 10), subplot_kw={'projection': ccrs.PlateCarree()})
+    ax.set_extent([2, 20, 46, 57])  # etwas breiterer Bereich um Deutschland
 
     # Temperaturkarte
     im = ax.pcolormesh(lon, lat, t2m, cmap=cmap, norm=norm, shading='auto')
@@ -93,10 +95,10 @@ for filename in sorted(os.listdir(data_dir)):
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("white")
 
-    # Titel mit Vorhersagezeit
-    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time:%d.%m.%Y %H:%M} UTC")
+    # Titel mit deutscher Zeit
+    ax.set_title(f"ICON-D2 2m Temperatur - {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)")
 
-    # Speichern
-    outname = f"output_{valid_time:%Y%m%d_%H%M}.png"
+    # Speichern mit UTC-Zeit im Dateinamen
+    outname = f"output_{valid_time_utc:%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches="tight")
     plt.close()
