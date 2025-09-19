@@ -72,8 +72,8 @@ def add_ww_legend_bottom(fig, present_codes, ww_categories, ww_colors_base):
     colors_for_legend = []
 
     for label, codes in ww_categories.items():
-        c = next((c for c in codes if c in present_codes), None)
-        if c is not None:
+        present_in_category = [c for c in codes if c in present_codes]
+        for c in present_in_category:
             codes_for_legend.append(c)
             labels_for_legend.append(label)
             colors_for_legend.append(ww_colors_base[c])
