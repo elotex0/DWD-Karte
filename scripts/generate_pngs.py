@@ -7,7 +7,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo  # für Zeitzone
+from zoneinfo import ZoneInfo  # für MEZ/MESZ
 
 data_dir = sys.argv[1]
 output_dir = sys.argv[2]
@@ -15,10 +15,10 @@ output_dir = sys.argv[2]
 # Ordner sicher erstellen
 os.makedirs(output_dir, exist_ok=True)
 
-# Lade Bundesländergrenzen
+# Bundesländergrenzen
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 
-# Städte in Deutschland
+# Städte
 cities = pd.DataFrame({
     'name': ['Berlin','Hamburg','München','Köln','Frankfurt','Dresden','Stuttgart','Düsseldorf',
              'Bremen','Kiel','Rostock','Mainz','Karlsruhe'],
@@ -30,29 +30,35 @@ for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
 
+    # step aus Dateiname
+    step = filename.split("_")[-1].split(".")[0]
+
+    # RUN_DATE und RUN_HOUR aus Dateiname extrahieren
+    # Beispiel-Dateiname: icon-d2_germany_regular-lat-lon_single-level_20250918_21_000_2d_t_2m.grib2
+    parts = filename.split("_")
+    RUN_DATE = datetime.strptime(parts[5], "%Y%m%d")
+    RUN_HOUR = int(parts[6])  # z.B. 21 für 21Z
+    step_hour = int(step)
+
+    # Forecast-Zeit berechnen
+    forecast_utc = RUN_DATE + timedelta(hours=RUN_HOUR + step_hour)
+    forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
+    forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
+
+    # Dataset laden
     ds = cfgrib.open_dataset(os.path.join(data_dir, filename))
     t2m = ds['t2m'] - 273.15  # K -> °C
-
     if len(t2m.shape) == 3:
         t2m = t2m[0,:,:]
 
     lon = ds['longitude']
     lat = ds['latitude']
 
-    # Forecast-Zeit aus Dateiname berechnen
-    parts = filename.split("_")
-    run_date = datetime.strptime(parts[4], "%Y%m%d")
-    run_hour = int(parts[5])
-    step_hour = int(parts[6])
-    forecast_utc = run_date + timedelta(hours=run_hour + step_hour)
-    forecast_local = forecast_utc.astimezone(ZoneInfo("Europe/Berlin"))
-    forecast_str = forecast_local.strftime("%d.%m.%Y %H:%M %Z")
-
-    # Plot
+    # Plot erstellen
     fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
-    # Temperatur Colormap kräftig
+    # Temperatur Colormap kräftiger
     im = ax.pcolormesh(lon, lat, t2m, cmap='RdYlBu_r', shading='auto', vmin=-20, vmax=35)
 
     # Bundesländer
@@ -70,9 +76,9 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende unten
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, label='Temperatur 2m [°C]')
 
-    # Titel mit Forecast-Zeit
+    # Titel mit lokaler Uhrzeit
     ax.set_title(f"ICON-D2 2m Temperatur - {forecast_str}")
 
     # Speichern
-    plt.savefig(os.path.join(output_dir, f"output_{parts[6]}.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, f"output_{step}.png"), dpi=150)
     plt.close()
