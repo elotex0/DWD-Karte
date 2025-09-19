@@ -51,7 +51,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Zeitstempel aus Metadaten
     valid_time = pd.to_datetime(ds.valid_time.values)
 
-    fig, ax = plt.subplots(figsize=(10,10), subplot_kw={'projection': ccrs.PlateCarree()})
+    # Breiteres Format (Querformat)
+    fig, ax = plt.subplots(figsize=(14,8), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
     # Temperaturkarte
@@ -71,9 +72,9 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Legende unter der Karte mit dunklem Hintergrund
     cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=50)
-    cbar.set_label("Temperatur 2m [°C]", color="white")
-    cbar.ax.tick_params(colors="white")
-    cbar.outline.set_edgecolor("white")
+    cbar.set_label("Temperatur 2m [°C]", color="black")
+    cbar.ax.tick_params(colors="black")
+    cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("black")
 
     # Titel mit Vorhersagezeit
