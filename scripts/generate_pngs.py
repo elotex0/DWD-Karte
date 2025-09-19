@@ -39,18 +39,44 @@ if var_type == "t2m":
     cmap = mcolors.ListedColormap(colors)
     norm = mcolors.BoundaryNorm(bounds, cmap.N)
 elif var_type == "ww":
-    # WMO Wettercodes
+    # WMO Wettercodes mit passenden Farben
     ww_colors = { 
-        45:"#FFD700",48:"#FFD700",                           # Nebel
-        51:"#ADD8E6",53:"#ADD8E6",55:"#ADD8E6",56:"#ADD8E6",57:"#ADD8E6", # leichter Regen
-        61:"#ADD8E6",63:"#ADD8E6",65:"#ADD8E6",66:"#ADD8E6",67:"#ADD8E6", # Regen
-        80:"#00008B",81:"#00008B",82:"#00008B",85:"#00008B",86:"#00008B", # Schauer
-        95:"#FF77FF",96:"#FF77FF", 99:"#8B008B"                            # Gewitter
+        45:"#FFFF00",  # Fog hellgelb
+        48:"#FFD700",  # Fog Reifbildung gold
+        51:"#90EE90",  # Regen leicht hellgrün
+        61:"#32CD32",  # Regen mäßig mittelgrün
+        63:"#228B22",  # Regen stark dunkelgrün
+        65:"#FF6347",  # Gef. Regen leicht hellrot
+        66:"#FF0000",  # Gef. Regen stark dunkelrot
+        56:"#FFA500",  # Schneeregen leicht hellorange
+        57:"#FF8C00",  # Schneeregen mäßig/stark dunkelorange
+        71:"#ADD8E6",  # Schneefall leicht hellblau
+        73:"#87CEEB",  # Schneefall mäßig etwas dunkler blau
+        75:"#4682B4",  # Schneefall stark dunkelblau
+        95:"#FF77FF",  # Gewitter leicht/mäßig hellpink
+        96:"#C71585"   # Gewitter stark dunkelpink
     }
     codes = list(ww_colors.keys())
     colors = [ww_colors[c] for c in codes]
     cmap = mcolors.ListedColormap(colors)
-    norm = None  # diskrete Farben direkt, kein BoundaryNorm nötig
+    norm = None  # diskrete Farben direkt
+
+    legend_labels = {
+        45: "Fog",
+        48: "Fog Reifbildung",
+        51: "Regen leicht",
+        61: "Regen mäßig",
+        63: "Regen stark",
+        65: "Gef. Regen leicht",
+        66: "Gef. Regen stark",
+        56: "Schneeregen leicht",
+        57: "Schneeregen mäßig/stark",
+        71: "Schneefall leicht",
+        73: "Schneefall mäßig",
+        75: "Schneefall stark",
+        95: "Gewitter leicht/mäßig",
+        96: "Gewitter stark"
+    }
 
 # Loop über alle GRIB2-Dateien
 for filename in sorted(os.listdir(data_dir)):
@@ -113,32 +139,9 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.set_ticks(bounds)
         cbar.set_label("Temperatur 2m [°C]", color="black")
     else:
-        # Beschriftungen für die WMO-Codes
-        legend_labels = {
-            45: "Fog",
-            48: "Fog Reifbildung",
-            51: "Regen leicht",
-            53: "Regen leicht",
-            55: "Regen leicht",
-            56: "Schneeregen leicht",
-            57: "Schneeregen stark",
-            61: "Regen mäßig",
-            63: "Regen stark",
-            65: "Gef. Regen leicht", 
-            66: "Gef. Regen stark", 
-            67: "Regen stark",
-            80: "Schauer leicht",
-            81: "Schauer mäßig",
-            82: "Schauer stark",
-            85: "Schauer leicht",
-            86: "Schauer mäßig",
-            95: "Gewitter leicht/mäßig",
-            96: "Gewitter stark",
-            99: "Unbekannt"
-        }
-        # Tickpositionen mittig zwischen Farben
+        # Tickpositionen mittig zwischen Farbblöcken
         cbar.set_ticks([i + 0.5 for i in range(len(codes))])
-        cbar.set_ticklabels([legend_labels.get(c, str(c)) for c in codes])
+        cbar.set_ticklabels([legend_labels[c] for c in codes])
         cbar.set_label("WMO Wettercode", color="black")
     cbar.ax.tick_params(colors="black", labelsize=8)
     cbar.outline.set_edgecolor("black")
