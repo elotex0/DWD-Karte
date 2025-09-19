@@ -24,13 +24,16 @@ cities = pd.DataFrame({
     'lon': [13.40,9.99,11.57,6.96,8.68,13.73,9.18,6.78]
 })
 
-# DWD-ähnliche Farbskala
+# Temperaturbereiche von -30 bis +40 in 5°C Schritten
+bounds = list(range(-30, 45, 5))
+
+# Farbverlauf (angepasst an DWD-Farben, verlängert)
 colors = [
-    "#002aff", "#0055ff", "#00aaff", "#00ffaa", "#55ff00", 
-    "#aaff00", "#ffff00", "#ffcc00", "#ff8800", "#ff0000", 
-    "#cc0000", "#990000"
+    "#001070", "#002aff", "#0055ff", "#0088ff", "#00aaff", "#00ddff", 
+    "#00ffaa", "#55ff00", "#aaff00", "#d4ff00", "#ffff00", "#ffcc00", 
+    "#ff8800", "#ff5500", "#ff0000", "#cc0000", "#990000"
 ]
-bounds = [-20,-15,-10,-5,0,5,10,15,20,25,30,35]
+
 cmap = mcolors.ListedColormap(colors)
 norm = mcolors.BoundaryNorm(bounds, cmap.N)
 
@@ -51,8 +54,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Zeitstempel aus Metadaten
     valid_time = pd.to_datetime(ds.valid_time.values)
 
-    # Breiteres Format (Querformat)
-    fig, ax = plt.subplots(figsize=(14,8), subplot_kw={'projection': ccrs.PlateCarree()})
+    # Größere Figur (breit)
+    fig, ax = plt.subplots(figsize=(18,10), subplot_kw={'projection': ccrs.PlateCarree()})
     ax.set_extent([5,16,47,56])  # Deutschland
 
     # Temperaturkarte
@@ -70,10 +73,10 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=':')
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende unter der Karte mit dunklem Hintergrund
-    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=50)
+    # Legende unter der Karte mit vielen Werten
+    cbar = fig.colorbar(im, ax=ax, orientation='horizontal', pad=0.05, aspect=50, ticks=bounds)
     cbar.set_label("Temperatur 2m [°C]", color="black")
-    cbar.ax.tick_params(colors="black")
+    cbar.ax.tick_params(colors="black", labelsize=8)
     cbar.outline.set_edgecolor("black")
     cbar.ax.set_facecolor("black")
 
