@@ -68,31 +68,32 @@ BOTTOM_AREA_PX = 179
 TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
 TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
 
-# Kartenextent: Deutschland + kleiner Rand, an TARGET_ASPECT angepasst
+# Kartenextent: Deutschland + kleiner Rand
 _minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
 _w = _maxx - _minx
 _h = _maxy - _miny
-base_pad_x = _w * 0.05  # seitlich etwas Rand
-base_pad_y = _h * 0.03  # oben/unten etwas weniger
+
+# nur seitlicher Rand
+base_pad_x = _w * 0.05
 xmin = _minx - base_pad_x
 xmax = _maxx + base_pad_x
-ymin = _miny - base_pad_y
-ymax = _maxy + base_pad_y
+
+# oben/unten fix lassen (nur kleiner Rand möglich, falls gewünscht)
+ymin = _miny - _h * 0.03
+ymax = _maxy + _h * 0.03
+
+# Verhältnis prüfen: falls zu schmal → nur Breite erweitern
 w = xmax - xmin
 h = ymax - ymin
-if w / h < TARGET_ASPECT:
-    # zu schmal → Breite erweitern
+current_aspect = w / h
+if current_aspect < TARGET_ASPECT:
     needed_w = h * TARGET_ASPECT
     extra = (needed_w - w) / 2
     xmin -= extra
     xmax += extra
-else:
-    # zu flach → Höhe erweitern
-    needed_h = w / TARGET_ASPECT
-    extra = (needed_h - h) / 2
-    ymin -= extra
-    ymax += extra
+
 extent = [xmin, xmax, ymin, ymax]
+
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
