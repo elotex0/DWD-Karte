@@ -135,10 +135,22 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur und Achsen-Layout: 16:9 Querformat, Fokus Deutschland-Extent
-    fig = plt.figure(figsize=(16, 9))
-    # Karte hoch und breit, mit minimalen Rändern oben/unten, seitlich etwas mehr
-    ax = fig.add_axes([0.0, 0.16, 1.0, 0.84], projection=ccrs.PlateCarree())
+    # Figur und Achsen-Layout mit exakten Pixeln: 880x830 gesamt, Karte 877x646, unten 179 px
+    FIG_W_PX, FIG_H_PX = 880, 830
+    MAP_W_PX, MAP_H_PX = 877, 646
+    BOTTOM_AREA_PX = 179  # Titel/Legende
+    LEFT_MARGIN_PX = (FIG_W_PX - MAP_W_PX) / 2  # symmetrisch links/rechts
+
+    # Figure mit fixen Pixeln (dpi so wählen, dass figsize*dpi=Pixel)
+    fig = plt.figure(figsize=(FIG_W_PX/100, FIG_H_PX/100), dpi=100)
+
+    # Normierte Achsenkoordinaten aus Pixeln berechnen
+    ax_left = LEFT_MARGIN_PX / FIG_W_PX
+    ax_bottom = BOTTOM_AREA_PX / FIG_H_PX
+    ax_width = MAP_W_PX / FIG_W_PX
+    ax_height = MAP_H_PX / FIG_H_PX
+
+    ax = fig.add_axes([ax_left, ax_bottom, ax_width, ax_height], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.set_axis_off()  # Achsen komplett ausblenden für randlose Karte
 
@@ -168,17 +180,32 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Footer (Titel, Laufzeit, Uhrzeit) direkt unter der Karte
-    footer_ax = fig.add_axes([0.0, 0.10, 1.0, 0.08])  # noch etwas kompakter
+    # Footer und Legendenbereich mit exakten Pixelhöhen: 179 px total unten
+    footer_top_px = BOTTOM_AREA_PX  # beginnt bei 0, reicht hoch bis 179 px
+
+    # Footer-Achse (Text) ~ 110 px hoch
+    footer_h_px = 110
+    footer_ax = fig.add_axes([
+        0.0,
+        0.0 + (0 / FIG_H_PX),
+        1.0,
+        footer_h_px / FIG_H_PX
+    ])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
-    footer_ax.text(0.01, 0.8, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
-    footer_ax.text(0.99, 0.8, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
+    footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.99, 0.85, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
 
-    # Legende ganz unten (volle Breite, kompakter)
+    # Legendenbereich ~ 69 px hoch (179 - 110)
+    legend_h_px = max(1, BOTTOM_AREA_PX - footer_h_px)
     if var_type == "t2m":
-        cbar_ax = fig.add_axes([0.03, 0.02, 0.94, 0.035])
+        cbar_ax = fig.add_axes([
+            0.03,
+            (footer_h_px) / FIG_H_PX,
+            0.94,
+            legend_h_px / FIG_H_PX
+        ])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
@@ -186,8 +213,12 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
-        # Legende für WW
-        legend_ax = fig.add_axes([0.03, 0.01, 0.94, 0.045])
+        legend_ax = fig.add_axes([
+            0.03,
+            (footer_h_px) / FIG_H_PX,
+            0.94,
+            legend_h_px / FIG_H_PX
+        ])
         legend_ax.axis("off")
         categories_present = [(label, codes) for label, codes in ww_categories.items()]
         n_categories = len(categories_present)
@@ -210,7 +241,8 @@ for filename in sorted(os.listdir(data_dir)):
                     )
                 legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
 
-    # Speichern ohne Ränder/weiße Balken
+    # Speichern mit exakter Pixelgröße 880x830
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches='tight', pad_inches=0)
+    # Da Figure auf dpi=100 und figsize=(8.8, 8.3) gesetzt ist, ergibt das exakt 880x830
+    plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
     plt.close()
