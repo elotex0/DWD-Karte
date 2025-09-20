@@ -62,13 +62,17 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Kartenextent für Deutschland
+# Kartenextent für Deutschland (optimiert für volle Breite)
 germany_bounds = bundeslaender.total_bounds
+# Seitenverhältnis berechnen
+width = germany_bounds[2] - germany_bounds[0]
+height = germany_bounds[3] - germany_bounds[1]
+# Wir erweitern oben/unten weniger, links/rechts mehr, damit die Karte "breit" wird
 extent = [
-    germany_bounds[0] - 2,  # links
-    germany_bounds[2] + 2,  # rechts
-    germany_bounds[1] - 0.5,  # unten minimal
-    germany_bounds[3] + 0.5   # oben minimal
+    germany_bounds[0] - 2.5,  # links weiter raus
+    germany_bounds[2] + 2.5,  # rechts weiter raus
+    germany_bounds[1] - 0.2,  # unten minimal
+    germany_bounds[3] + 0.2   # oben minimal
 ]
 
 # WW-Legende unten
@@ -134,9 +138,8 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur und Achsen-Layout: Karte oben bündig, Footer und Legende unten
-    fig = plt.figure(figsize=(10, 10))
-    # Karte nimmt oberen Bereich ein, Footer darunter, Legende ganz unten
+    # Figur und Achsen-Layout: Querformat, Karte nimmt oben volle Breite ein
+    fig = plt.figure(figsize=(12, 8))  # Querformat
     ax = fig.add_axes([0.0, 0.22, 1.0, 0.78], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
