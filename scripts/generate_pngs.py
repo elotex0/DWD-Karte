@@ -66,28 +66,31 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 FIG_W_PX, FIG_H_PX = 880, 830
 BOTTOM_AREA_PX = 179
 TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
-TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525 (immer 880/651)
+TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525 (880/651)
 
 # Bounding Box Deutschland
 _minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
-_w = _maxx - _minx
-_h = _maxy - _miny
 
-# oben/unten fix halten (nur kleiner Rand möglich, falls gewünscht)
-ymin = _miny - _h * 0.03
-ymax = _maxy + _h * 0.03
+# Nachbarn mit anzeigen:
+# Westen: ganz Frankreich + Niederlande → xmin deutlich nach Westen
+xmin = -5
+# Osten: Polen + Tschechien → xmax etwas weiter nach Osten
+xmax = 20
+# Oben/unten: fix auf Deutschland
+ymin = _miny
+ymax = _maxy
 h = ymax - ymin
 
-# gewünschte Breite nach dem festen Seitenverhältnis
+# Seitenverhältnis exakt einhalten (880x651)
 needed_w = h * TARGET_ASPECT
-
-# tatsächliche Breite → falls zu schmal, links/rechts auffüllen
-current_w = _w
-pad_x = (needed_w - current_w) / 2
-xmin = _minx - pad_x
-xmax = _maxx + pad_x
+current_w = xmax - xmin
+if current_w < needed_w:
+    extra = (needed_w - current_w) / 2
+    xmin -= extra
+    xmax += extra
 
 extent = [xmin, xmax, ymin, ymax]
+
 
 
 # WW-Legende unten
