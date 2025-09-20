@@ -62,13 +62,37 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Ziel-Pixelmaße
+# Ziel-Pixelmaße und Ziel-Seitenverhältnis für die Kartenfläche oben
 FIG_W_PX, FIG_H_PX = 880, 830
 BOTTOM_AREA_PX = 179
 TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
+TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
 
-# Fester Deutschland-Extent: links/rechts viel Platz, oben/unten minimal
-extent = [5.0, 47.0, 16.5, 55.5]  # [minx, miny, maxx, maxy]
+# Kartenextent: Deutschland + kleiner Rand, an TARGET_ASPECT angepasst
+_minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
+_w = _maxx - _minx
+_h = _maxy - _miny
+base_pad_x = _w * 0.05  # seitlich etwas Rand
+base_pad_y = _h * 0.03  # oben/unten etwas weniger
+xmin = _minx - base_pad_x
+xmax = _maxx + base_pad_x
+ymin = _miny - base_pad_y
+ymax = _maxy + base_pad_y
+w = xmax - xmin
+h = ymax - ymin
+if w / h < TARGET_ASPECT:
+    # zu schmal → Breite erweitern
+    needed_w = h * TARGET_ASPECT
+    extra = (needed_w - w) / 2
+    xmin -= extra
+    xmax += extra
+else:
+    # zu flach → Höhe erweitern
+    needed_h = w / TARGET_ASPECT
+    extra = (needed_h - h) / 2
+    ymin -= extra
+    ymax += extra
+extent = [xmin, xmax, ymin, ymax]
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
@@ -133,15 +157,22 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figure
+    # Figur und Achsen-Layout mit exakten Pixeln: 880x830 gesamt, Kartenbereich oben 880x651, unten 179 px
+    FIG_W_PX, FIG_H_PX = 880, 830
+    TOP_H_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
+
+    # Figure mit fixen Pixeln (dpi so wählen, dass figsize*dpi=Pixel)
     fig = plt.figure(figsize=(FIG_W_PX/100, FIG_H_PX/100), dpi=100)
+
+    # Kartenachse füllt die gesamte Breite oben (keine weißen Ränder links/rechts)
     ax_left = 0.0
     ax_bottom = BOTTOM_AREA_PX / FIG_H_PX
     ax_width = 1.0
-    ax_height = TOP_AREA_PX / FIG_H_PX
+    ax_height = TOP_H_PX / FIG_H_PX
+
     ax = fig.add_axes([ax_left, ax_bottom, ax_width, ax_height], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
-    ax.set_axis_off()
+    ax.set_axis_off()  # Achsen komplett ausblenden für randlose Karte
 
     # Plot
     if var_type == "t2m":
@@ -169,11 +200,19 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende & Footer
+    # Legende ganz unten (immer unten), darüber der Titel
+    # Wir teilen die 179 px: Legende 69 px unten, Titel 110 px darüber
     legend_h_px = 69
-    footer_h_px = BOTTOM_AREA_PX - legend_h_px
+    footer_h_px = BOTTOM_AREA_PX - legend_h_px  # 110 px
+
+    # Legende (ganz unten)
     if var_type == "t2m":
-        cbar_ax = fig.add_axes([0.03, 0.0, 0.94, legend_h_px / FIG_H_PX])
+        cbar_ax = fig.add_axes([
+            0.03,
+            0.0,
+            0.94,
+            legend_h_px / FIG_H_PX
+        ])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
@@ -181,16 +220,49 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
-        add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
+        legend_ax = fig.add_axes([
+            0.03,
+            0.0,
+            0.94,
+            legend_h_px / FIG_H_PX
+        ])
+        legend_ax.axis("off")
+        categories_present = [(label, codes) for label, codes in ww_categories.items()]
+        n_categories = len(categories_present)
+        if n_categories > 0:
+            total_width = 1.0
+            block_width = total_width / n_categories
+            gap = 0.02 * block_width
+            for i, (label, codes_in_cat) in enumerate(categories_present):
+                x0 = i * block_width
+                x1 = (i + 1) * block_width
+                block_inner_width = x1 - x0 - gap
+                n_colors = len(codes_in_cat)
+                color_width = block_inner_width / n_colors
+                for j, c in enumerate(codes_in_cat):
+                    color = ww_colors_base.get(c, "#FFFFFF")
+                    legend_ax.add_patch(
+                        mpatches.Rectangle((x0 + j * color_width, 0.5),
+                                           color_width, 0.5,
+                                           facecolor=color, edgecolor='black')
+                    )
+                legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
 
-    footer_ax = fig.add_axes([0.0, legend_h_px / FIG_H_PX, 1.0, footer_h_px / FIG_H_PX])
+    # Footer (Titel) direkt über der Legende
+    footer_ax = fig.add_axes([
+        0.0,
+        legend_h_px / FIG_H_PX,
+        1.0,
+        footer_h_px / FIG_H_PX
+    ])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.99, 0.85, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
 
-    # Speichern
+    # Speichern mit exakter Pixelgröße 880x830
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
+    # Da Figure auf dpi=100 und figsize=(8.8, 8.3) gesetzt ist, ergibt das exakt 880x830
     plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
     plt.close()
