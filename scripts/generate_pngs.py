@@ -221,12 +221,12 @@ for filename in sorted(os.listdir(data_dir)):
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px) / FIG_H_PX])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
-    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
+    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
 
     # Rechter Text: Prognose für + Datum/Uhrzeit fett
-    footer_ax.text(0.65, 0.90, "Prognose für:", fontsize=10, va="top", ha="left", fontweight="bold")
-    footer_ax.text(0.99, 0.75, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right", fontweight="bold")
+    footer_ax.text(0.75, 0.90, "Prognose für:", fontsize=10, va="top", ha="left", fontweight="bold")
+    footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right", fontweight="bold")
 
     # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
