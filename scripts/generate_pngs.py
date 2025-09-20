@@ -82,6 +82,7 @@ ymax = _maxy
 h = ymax - ymin
 
 # Deutschland mittig, links/rechts etwas Nachbarländer
+# Deutschland leicht nach rechts verschoben, links/rechts etwas Nachbarländer
 left_pad_factor = 0.42
 right_pad_factor = 0.42
 xmin = _minx - _w * left_pad_factor
@@ -94,6 +95,12 @@ if current_w < needed_w:
     extra = (needed_w - current_w) / 2
     xmin -= extra
     xmax += extra
+
+# Zusätzlicher Shift nach rechts
+shift_factor = 0.03  # 3% der ursprünglichen Breite nach rechts
+xmin += _w * shift_factor
+xmax += _w * shift_factor
+
 
 extent = [xmin, xmax, ymin, ymax]
 
