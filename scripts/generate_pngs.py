@@ -19,7 +19,7 @@ output_dir = sys.argv[2]
 var_type = sys.argv[3]  # 't2m' oder 'ww'
 os.makedirs(output_dir, exist_ok=True)
 
-# Geo-Daten laden
+# Geo-Daten
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 cities = pd.DataFrame({
     'name': ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Dresden', 'Stuttgart', 'Düsseldorf'],
@@ -65,16 +65,16 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 # Kartenextent für Deutschland
 germany_bounds = bundeslaender.total_bounds
 extent = [
-    germany_bounds[0] - 2,  # links etwas mehr
-    germany_bounds[2] + 2,  # rechts etwas mehr
+    germany_bounds[0] - 2,  # links
+    germany_bounds[2] + 2,  # rechts
     germany_bounds[1] - 0.5,  # unten minimal
     germany_bounds[3] + 0.5   # oben minimal
 ]
 
-# WW-Legende
+# WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
-    legend_height = 0.06
-    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
+    legend_height = 0.05
+    legend_ax = fig.add_axes([0.1, 0.01, 0.8, legend_height])
     legend_ax.axis("off")
 
     categories_present = [(label, codes) for label, codes in ww_categories.items()]
@@ -136,13 +136,14 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Figur
     fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_axes([0.05, 0.25, 0.9, 0.7], projection=ccrs.PlateCarree())  # Karte hochgezogen
+    ax = fig.add_axes([0.05, 0.25, 0.9, 0.65], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     # Plot
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-        cbar = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.04, pad=0.02)
+        cbar_ax = fig.add_axes([0.1, 0.08, 0.8, 0.03])
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=8)
@@ -172,14 +173,12 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Titel / Fußzeile unter der Karte
-    footer_ax = fig.add_axes([0.05, 0.05, 0.9, 0.15])
+    # Footer unter der Karte
+    footer_ax = fig.add_axes([0.05, 0.01, 0.9, 0.2])
     footer_ax.axis("off")
-    # Links
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
-    footer_ax.text(0, 0.5, left_text, fontsize=10, fontweight="bold" if var_type=="ww" else "normal", va="center", ha="left")
-    # Rechts
+    footer_ax.text(0, 0.5, left_text, fontsize=10, fontweight="bold", va="center", ha="left")
     footer_ax.text(1, 0.5, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="center", ha="right")
 
     # Speichern
