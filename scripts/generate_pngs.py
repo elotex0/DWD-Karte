@@ -66,31 +66,26 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 FIG_W_PX, FIG_H_PX = 880, 830
 BOTTOM_AREA_PX = 179
 TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
-TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
+TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525 (immer 880/651)
 
-# Kartenextent: Deutschland + kleiner Rand
+# Bounding Box Deutschland
 _minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
 _w = _maxx - _minx
 _h = _maxy - _miny
 
-# nur seitlicher Rand
-base_pad_x = _w * 0.05
-xmin = _minx - base_pad_x
-xmax = _maxx + base_pad_x
-
-# oben/unten fix lassen (nur kleiner Rand möglich, falls gewünscht)
+# oben/unten fix halten (nur kleiner Rand möglich, falls gewünscht)
 ymin = _miny - _h * 0.03
 ymax = _maxy + _h * 0.03
-
-# Verhältnis prüfen: falls zu schmal → nur Breite erweitern
-w = xmax - xmin
 h = ymax - ymin
-current_aspect = w / h
-if current_aspect < TARGET_ASPECT:
-    needed_w = h * TARGET_ASPECT
-    extra = (needed_w - w) / 2
-    xmin -= extra
-    xmax += extra
+
+# gewünschte Breite nach dem festen Seitenverhältnis
+needed_w = h * TARGET_ASPECT
+
+# tatsächliche Breite → falls zu schmal, links/rechts auffüllen
+current_w = _w
+pad_x = (needed_w - current_w) / 2
+xmin = _minx - pad_x
+xmax = _maxx + pad_x
 
 extent = [xmin, xmax, ymin, ymax]
 
