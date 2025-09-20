@@ -225,7 +225,7 @@ for filename in sorted(os.listdir(data_dir)):
     footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
 
     # Rechter Text: Prognose für + Datum/Uhrzeit fett
-    footer_ax.text(0.99, 0.90, "Prognose für:", fontsize=10, va="top", ha="left", fontweight="bold")
+    footer_ax.text(0.85, 0.90, "Prognose für:", fontsize=10, va="top", ha="left", fontweight="bold")
     footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right", fontweight="bold")
 
     # Speichern
