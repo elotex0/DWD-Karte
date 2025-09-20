@@ -62,17 +62,30 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Kartenextent für Deutschland (optimiert für volle Breite)
+# Kartenextent für Deutschland (angepasst an das Seitenverhältnis der Figure)
 germany_bounds = bundeslaender.total_bounds
-# Seitenverhältnis berechnen
+center_x = (germany_bounds[0] + germany_bounds[2]) / 2
+center_y = (germany_bounds[1] + germany_bounds[3]) / 2
+# Ziel-Seitenverhältnis: Figure (12/8 = 1.5)
+fig_aspect = 12 / 8
+# Ursprüngliche Ausdehnung
 width = germany_bounds[2] - germany_bounds[0]
 height = germany_bounds[3] - germany_bounds[1]
-# Wir erweitern oben/unten weniger, links/rechts mehr, damit die Karte "breit" wird
+# Berechne neue Breite/Höhe, damit das Extent das gleiche Seitenverhältnis wie die Figure hat
+if width / height < fig_aspect:
+    # Zu hoch, Breite erhöhen
+    new_width = height * fig_aspect
+    new_height = height
+else:
+    # Zu breit, Höhe erhöhen
+    new_width = width
+    new_height = width / fig_aspect
+# Extent mittig um Deutschland
 extent = [
-    germany_bounds[0] - 2.5,  # links weiter raus
-    germany_bounds[2] + 2.5,  # rechts weiter raus
-    germany_bounds[1] - 0.2,  # unten minimal
-    germany_bounds[3] + 0.2   # oben minimal
+    center_x - new_width / 2,
+    center_x + new_width / 2,
+    center_y - new_height / 2,
+    center_y + new_height / 2
 ]
 
 # WW-Legende unten
