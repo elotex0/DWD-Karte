@@ -123,7 +123,7 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
                                    color_width, 0.6,
                                    facecolor=color, edgecolor='black')
             )
-        legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='bottom', fontsize=10)
+        legend_ax.text((x0 + x1)/2, 0.05, label, ha='center', va='bottom', fontsize=10)
 
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
