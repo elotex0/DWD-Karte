@@ -62,25 +62,22 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Kartenextent für Deutschland (angepasst an das Seitenverhältnis der Figure)
+# Kartenextent für Deutschland (gestreckt auf 16:9)
 germany_bounds = bundeslaender.total_bounds
 center_x = (germany_bounds[0] + germany_bounds[2]) / 2
 center_y = (germany_bounds[1] + germany_bounds[3]) / 2
-# Ziel-Seitenverhältnis: Figure (12/8 = 1.5)
-fig_aspect = 12 / 8
+# Ziel-Seitenverhältnis: 16:9
+aspect = 16 / 9
 # Ursprüngliche Ausdehnung
 width = germany_bounds[2] - germany_bounds[0]
 height = germany_bounds[3] - germany_bounds[1]
-# Berechne neue Breite/Höhe, damit das Extent das gleiche Seitenverhältnis wie die Figure hat
-if width / height < fig_aspect:
-    # Zu hoch, Breite erhöhen
-    new_width = height * fig_aspect
+# Berechne neue Breite/Höhe für 16:9
+if width / height < aspect:
+    new_width = height * aspect
     new_height = height
 else:
-    # Zu breit, Höhe erhöhen
     new_width = width
-    new_height = width / fig_aspect
-# Extent mittig um Deutschland
+    new_height = width / aspect
 extent = [
     center_x - new_width / 2,
     center_x + new_width / 2,
