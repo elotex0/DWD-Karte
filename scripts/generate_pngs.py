@@ -96,16 +96,6 @@ if current_w < needed_w:
     xmin -= extra
     xmax += extra
 
-# Zusätzlicher Shift nach rechts
-shift_factor = 0.2  # 3% der ursprünglichen Breite nach rechts
-xmin += _w * shift_factor
-xmax += _w * shift_factor
-
-# Minimal nach oben verschieben
-shift_y_factor = 0.02  # 1% der Höhe nach oben
-ymin += _h * shift_y_factor
-ymax += _h * shift_y_factor
-
 extent = [xmin, xmax, ymin, ymax]
 
 # WW-Legende unten
@@ -169,9 +159,12 @@ for filename in sorted(os.listdir(data_dir)):
     scale = 0.90
     fig = plt.figure(figsize=(FIG_W_PX/100*scale, FIG_H_PX/100*scale), dpi=100)
 
-    # Karte horizontal gestreckt
-    ax = fig.add_axes([0.0, BOTTOM_AREA_PX / FIG_H_PX, 1.0, TOP_AREA_PX / FIG_H_PX],
+    # Karte etwas nach oben verschieben
+    shift_up = 0.02  # 2% der Figurenhöhe nach oben
+    
+    ax = fig.add_axes([0.0, BOTTOM_AREA_PX / FIG_H_PX + shift_up, 1.0, TOP_AREA_PX / FIG_H_PX],
                       projection=ccrs.PlateCarree())
+
     ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.set_axis_off()
     ax.set_aspect('auto')  # <-- horizontal strecken, weiße Balken weg
