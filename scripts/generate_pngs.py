@@ -72,14 +72,18 @@ TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
 _minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
 _w = _maxx - _minx
 _h = _maxy - _miny
-base_pad_x = _w * 0.5  # seitlich etwas Rand
-base_pad_y = _h * 0.02  # oben/unten etwas weniger
+# Minimaler vertikaler Rand, großer horizontaler Rand
+base_pad_x = _w * 0.5   # viel mehr Platz links/rechts
+base_pad_y = _h * 0.02  # oben/unten nur sehr wenig
+
 xmin = _minx - base_pad_x
 xmax = _maxx + base_pad_x
 ymin = _miny - base_pad_y
 ymax = _maxy + base_pad_y
+
 w = xmax - xmin
 h = ymax - ymin
+
 if w / h < TARGET_ASPECT:
     # zu schmal → Breite erweitern
     needed_w = h * TARGET_ASPECT
@@ -92,7 +96,9 @@ else:
     extra = (needed_h - h) / 2
     ymin -= extra
     ymax += extra
+
 extent = [xmin, xmax, ymin, ymax]
+
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
