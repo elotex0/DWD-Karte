@@ -74,8 +74,8 @@ extent = [
 
 # Funktion für WW-Legende unterhalb der Karte
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
-    legend_height = 0.08
-    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
+    legend_height = 0.05
+    legend_ax = fig.add_axes([0.1, 0.01, 0.8, legend_height])
     legend_ax.axis("off")
 
     categories_present = [(label, codes) for label, codes in ww_categories.items()]
@@ -140,7 +140,7 @@ for filename in sorted(os.listdir(data_dir)):
     # Figur & Achse
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.05)
     
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
