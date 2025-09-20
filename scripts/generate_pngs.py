@@ -97,10 +97,14 @@ if current_w < needed_w:
     xmax += extra
 
 # Zusätzlicher Shift nach rechts
-shift_factor = 0.03  # 3% der ursprünglichen Breite nach rechts
+shift_factor = 0.2  # 3% der ursprünglichen Breite nach rechts
 xmin += _w * shift_factor
 xmax += _w * shift_factor
 
+# Minimal nach oben verschieben
+shift_y_factor = 0.02  # 1% der Höhe nach oben
+ymin += _h * shift_y_factor
+ymax += _h * shift_y_factor
 
 extent = [xmin, xmax, ymin, ymax]
 
@@ -193,7 +197,7 @@ for filename in sorted(os.listdir(data_dir)):
     for _, city in cities.iterrows():
         ax.plot(city["lon"], city["lat"], "o", markersize=6, markerfacecolor="black",
                 markeredgecolor="white", markeredgewidth=1.5, zorder=5)
-        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=8, color="black", zorder=6)
+        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=9.5, color="black", zorder=6)
         txt.set_path_effects([path_effects.withStroke(linewidth=1.5, foreground="white")])
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
