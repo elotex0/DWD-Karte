@@ -82,8 +82,8 @@ ymax = _maxy
 h = ymax - ymin
 
 # Deutschland mittig, links/rechts etwas Nachbarländer
-left_pad_factor = 0.40
-right_pad_factor = 0.40
+left_pad_factor = 0.42
+right_pad_factor = 0.42
 xmin = _minx - _w * left_pad_factor
 xmax = _maxx + _w * right_pad_factor
 
@@ -118,8 +118,8 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
         for j, c in enumerate(codes_in_cat):
             color = ww_colors_base.get(c, "#FFFFFF")
             legend_ax.add_patch(
-                mpatches.Rectangle((x0 + j * color_width, 0.5),
-                                   color_width, 0.5,
+                mpatches.Rectangle((x0 + j * color_width, 0.65),
+                                   color_width, 0.7,
                                    facecolor=color, edgecolor='black')
             )
         legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
@@ -155,7 +155,7 @@ for filename in sorted(os.listdir(data_dir)):
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
     # Figure mit fixen Pixeln
-    scale = 0.95
+    scale = 0.90
     fig = plt.figure(figsize=(FIG_W_PX/100*scale, FIG_H_PX/100*scale), dpi=100)
 
     # Karte horizontal gestreckt
@@ -200,7 +200,7 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Legende unten
     legend_h_px = 50
-    legend_bottom_px = 35
+    legend_bottom_px = 45
     if var_type == "t2m":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
