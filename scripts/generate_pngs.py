@@ -139,9 +139,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Figur & Achse
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-    ax.set_extent(extent)
     fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.15)
-
+    
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
         cbar = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04)
@@ -162,10 +161,13 @@ for filename in sorted(os.listdir(data_dir)):
         for c, i in code2idx.items():
             idx_data[data == c] = i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
-
+    
         # WW-Legende unterhalb der Karte
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
-
+    
+    # **Hier den Extent nach dem Plot erzwingen**
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+    
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
     for _, city in cities.iterrows():
