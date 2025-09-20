@@ -64,18 +64,17 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 # Kartenextent für Deutschland
 germany_bounds = bundeslaender.total_bounds
-# Kartenextent für Deutschland (mehr links/rechts, weniger oben/unten)
 extent = [
     germany_bounds[0] - 2,  # links etwas mehr
     germany_bounds[2] + 2,  # rechts etwas mehr
-    germany_bounds[1] - 0.5,  # unten nur minimaler Rand
-    germany_bounds[3] + 0.5   # oben nur minimaler Rand
+    germany_bounds[1] - 0.5,  # unten minimal
+    germany_bounds[3] + 0.5   # oben minimal
 ]
 
-# Funktion für WW-Legende unterhalb der Karte
+# WW-Legende
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
-    legend_height = 0.05
-    legend_ax = fig.add_axes([0.1, 0.01, 0.8, legend_height])
+    legend_height = 0.06
+    legend_ax = fig.add_axes([0.1, 0.02, 0.8, legend_height])
     legend_ax.axis("off")
 
     categories_present = [(label, codes) for label, codes in ww_categories.items()]
@@ -96,17 +95,15 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
         color_width = block_inner_width / n_colors
 
         for j, c in enumerate(codes_in_cat):
-            color = ww_colors_base.get(c, "#FFFFFF")  # fallback auf Weiß
+            color = ww_colors_base.get(c, "#FFFFFF")
             legend_ax.add_patch(
                 mpatches.Rectangle((x0 + j * color_width, 0.5),
                                    color_width, 0.5,
                                    facecolor=color, edgecolor='black')
             )
 
-        legend_ax.text((x0 + x1) / 2, 0.25, label,
-                       ha='center', va='center', fontsize=8)
+        legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
 
-        
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
@@ -114,7 +111,7 @@ for filename in sorted(os.listdir(data_dir)):
     path = os.path.join(data_dir, filename)
     ds = cfgrib.open_dataset(path)
 
-    # Daten aus GRIB
+    # Daten
     if var_type == "t2m":
         if "t2m" not in ds:
             print(f"Keine t2m-Variable in {filename}")
@@ -137,14 +134,15 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur & Achse
+    # Figur
     fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.05)
-    
+    ax = fig.add_axes([0.05, 0.25, 0.9, 0.7], projection=ccrs.PlateCarree())  # Karte hochgezogen
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+
+    # Plot
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-        cbar = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04)
+        cbar = fig.colorbar(im, ax=ax, orientation="horizontal", fraction=0.04, pad=0.02)
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=8)
@@ -162,44 +160,27 @@ for filename in sorted(os.listdir(data_dir)):
         for c, i in code2idx.items():
             idx_data[data == c] = i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
-    
-        # WW-Legende unterhalb der Karte
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
-    
-    # **Hier den Extent nach dem Plot erzwingen**
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
-    
+
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
-    
     for _, city in cities.iterrows():
-        # Marker: schwarz mit weißer Umrandung
-        ax.plot(
-            city["lon"], city["lat"], "o",
-            markersize=6,
-            markerfacecolor="black",
-            markeredgecolor="white",
-            markeredgewidth=1.5,
-            zorder=5
-        )
-        # Text mit weißem Rand für bessere Lesbarkeit
-        txt = ax.text(
-            city["lon"] + 0.1, city["lat"] + 0.1, city["name"],
-            fontsize=8, color="black",
-            zorder=6
-        )
+        ax.plot(city["lon"], city["lat"], "o", markersize=6, markerfacecolor="black",
+                markeredgecolor="white", markeredgewidth=1.5, zorder=5)
+        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=8, color="black", zorder=6)
         txt.set_path_effects([path_effects.withStroke(linewidth=1.5, foreground="white")])
-    
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Titel
-    ax.set_title(
-        f"ICON-D2 {var_type.upper()} Vorhersage\n"
-        f"Lauf: {pd.to_datetime(run_time_utc).hour if run_time_utc is not None else '??'}Z, "
-        f"gültig: {valid_time_local:%d.%m.%Y %H:%M} Uhr (MEZ/MESZ)",
-        pad=20
-    )
+    # Titel / Fußzeile unter der Karte
+    footer_ax = fig.add_axes([0.05, 0.05, 0.9, 0.15])
+    footer_ax.axis("off")
+    # Links
+    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
+    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
+    footer_ax.text(0, 0.5, left_text, fontsize=10, fontweight="bold" if var_type=="ww" else "normal", va="center", ha="left")
+    # Rechts
+    footer_ax.text(1, 0.5, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="center", ha="right")
 
     # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
