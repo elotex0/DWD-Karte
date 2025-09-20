@@ -79,8 +79,8 @@ ymax = _maxy
 h = ymax - ymin
 
 # Deutschland mittig, links/rechts etwas Nachbarländer
-left_pad_factor = 0.25   # 25% der DE-Breite nach links
-right_pad_factor = 0.25  # 25% der DE-Breite nach rechts
+left_pad_factor = 0.25
+right_pad_factor = 0.25
 xmin = _minx - _w * left_pad_factor
 xmax = _maxx + _w * right_pad_factor
 
@@ -99,24 +99,19 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
     legend_height = 0.05
     legend_ax = fig.add_axes([0.1, 0.01, 0.8, legend_height])
     legend_ax.axis("off")
-
     categories_present = [(label, codes) for label, codes in ww_categories.items()]
     n_categories = len(categories_present)
     if n_categories == 0:
         return
-
     total_width = 1.0
     block_width = total_width / n_categories
     gap = 0.02 * block_width
-
     for i, (label, codes_in_cat) in enumerate(categories_present):
         x0 = i * block_width
         x1 = (i + 1) * block_width
         block_inner_width = x1 - x0 - gap
-
         n_colors = len(codes_in_cat)
         color_width = block_inner_width / n_colors
-
         for j, c in enumerate(codes_in_cat):
             color = ww_colors_base.get(c, "#FFFFFF")
             legend_ax.add_patch(
@@ -124,7 +119,6 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
                                    color_width, 0.5,
                                    facecolor=color, edgecolor='black')
             )
-
         legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
 
 # Schleife über Dateien
@@ -157,22 +151,15 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur und Achsen-Layout mit exakten Pixeln: 880x830 gesamt, Kartenbereich oben 880x651, unten 179 px
-    FIG_W_PX, FIG_H_PX = 880, 830
-    TOP_H_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
-
-    # Figure mit fixen Pixeln (dpi so wählen, dass figsize*dpi=Pixel)
+    # Figure mit fixen Pixeln
     fig = plt.figure(figsize=(FIG_W_PX/100, FIG_H_PX/100), dpi=100)
 
-    # Kartenachse füllt die gesamte Breite oben (keine weißen Ränder links/rechts)
-    ax_left = 0.0
-    ax_bottom = BOTTOM_AREA_PX / FIG_H_PX
-    ax_width = 1.0
-    ax_height = TOP_H_PX / FIG_H_PX
-
-    ax = fig.add_axes([ax_left, ax_bottom, ax_width, ax_height], projection=ccrs.PlateCarree())
+    # Karte horizontal gestreckt
+    ax = fig.add_axes([0.0, BOTTOM_AREA_PX / FIG_H_PX, 1.0, TOP_AREA_PX / FIG_H_PX],
+                      projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
-    ax.set_axis_off()  # Achsen komplett ausblenden für randlose Karte
+    ax.set_axis_off()
+    ax.set_aspect('auto')  # <-- horizontal strecken, weiße Balken weg
 
     # Plot
     if var_type == "t2m":
@@ -200,67 +187,30 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Legende ganz unten (immer unten), darüber der Titel
-    # Wir teilen die 179 px: Legende kleiner und nach oben verschoben
-    legend_h_px = 50    # kleiner
-    legend_bottom_px = 15  # leicht nach oben
-
+    # Legende unten
+    legend_h_px = 50
+    legend_bottom_px = 15
     if var_type == "t2m":
-        cbar_ax = fig.add_axes([
-            0.03,
-            legend_bottom_px / FIG_H_PX,
-            0.94,
-            legend_h_px / FIG_H_PX
-        ])
+        cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
-        cbar.ax.tick_params(colors="black", labelsize=7)  # Schrift etwas kleiner
+        cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
-        legend_ax = fig.add_axes([
-            0.03,
-            legend_bottom_px / FIG_H_PX,
-            0.94,
-            legend_h_px / FIG_H_PX
-        ])
-        legend_ax.axis("off")
-        categories_present = [(label, codes) for label, codes in ww_categories.items()]
-        n_categories = len(categories_present)
-        if n_categories > 0:
-            total_width = 1.0
-            block_width = total_width / n_categories
-            gap = 0.02 * block_width
-            for i, (label, codes_in_cat) in enumerate(categories_present):
-                x0 = i * block_width
-                x1 = (i + 1) * block_width
-                block_inner_width = x1 - x0 - gap
-                n_colors = len(codes_in_cat)
-                color_width = block_inner_width / n_colors
-                for j, c in enumerate(codes_in_cat):
-                    color = ww_colors_base.get(c, "#FFFFFF")
-                    legend_ax.add_patch(
-                        mpatches.Rectangle((x0 + j * color_width, 0.5),
-                                           color_width, 0.5,
-                                           facecolor=color, edgecolor='black')
-                    )
-                legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
+        add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
-    # Footer (Titel) direkt über der Legende
-    footer_ax = fig.add_axes([
-        0.0,
-        (legend_bottom_px + legend_h_px) / FIG_H_PX,
-        1.0,
-        (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px) / FIG_H_PX
-    ])
+    # Footer (Titel) über Legende
+    footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px) / FIG_H_PX, 1.0,
+                              (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px) / FIG_H_PX])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.99, 0.85, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
 
-    # Speichern mit exakter Pixelgröße 880x830
+    # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
     plt.close()
