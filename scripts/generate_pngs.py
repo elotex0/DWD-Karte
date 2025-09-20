@@ -134,21 +134,15 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_axes([0.05, 0.25, 0.9, 0.65], projection=ccrs.PlateCarree())
+    # Figur und Achsen-Layout: Karte oben bündig, Footer und Legende unten
+    fig = plt.figure(figsize=(10, 10))
+    # Karte nimmt oberen Bereich ein, Footer darunter, Legende ganz unten
+    ax = fig.add_axes([0.0, 0.22, 1.0, 0.78], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     # Plot
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-        cbar_ax = fig.add_axes([0.1, 0.08, 0.8, 0.03])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
-        cbar.set_ticks(list(range(-30, 45, 5)))
-        cbar.set_label("Temperatur 2m [°C]", color="black")
-        cbar.ax.tick_params(colors="black", labelsize=8)
-        cbar.outline.set_edgecolor("black")
-        cbar.ax.set_facecolor("white")
     else:
         valid_mask = np.isfinite(data)
         present_codes = np.unique(data[valid_mask]).astype(int)
@@ -161,7 +155,6 @@ for filename in sorted(os.listdir(data_dir)):
         for c, i in code2idx.items():
             idx_data[data == c] = i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
-        add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -173,13 +166,47 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Footer unter der Karte
-    footer_ax = fig.add_axes([0.05, 0.01, 0.9, 0.2])
+    # Footer (Titel, Laufzeit, Uhrzeit) direkt unter der Karte
+    footer_ax = fig.add_axes([0.0, 0.13, 1.0, 0.09])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
-    footer_ax.text(0, 0.5, left_text, fontsize=10, fontweight="bold", va="center", ha="left")
-    footer_ax.text(1, 0.5, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="center", ha="right")
+    footer_ax.text(0.01, 0.7, left_text, fontsize=11, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.99, 0.7, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=11, va="top", ha="right")
+
+    # Legende ganz unten
+    if var_type == "t2m":
+        cbar_ax = fig.add_axes([0.1, 0.04, 0.8, 0.04])
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
+        cbar.set_ticks(list(range(-30, 45, 5)))
+        cbar.set_label("Temperatur 2m [°C]", color="black")
+        cbar.ax.tick_params(colors="black", labelsize=8)
+        cbar.outline.set_edgecolor("black")
+        cbar.ax.set_facecolor("white")
+    else:
+        # Legende für WW
+        legend_ax = fig.add_axes([0.1, 0.01, 0.8, 0.04])
+        legend_ax.axis("off")
+        categories_present = [(label, codes) for label, codes in ww_categories.items()]
+        n_categories = len(categories_present)
+        if n_categories > 0:
+            total_width = 1.0
+            block_width = total_width / n_categories
+            gap = 0.02 * block_width
+            for i, (label, codes_in_cat) in enumerate(categories_present):
+                x0 = i * block_width
+                x1 = (i + 1) * block_width
+                block_inner_width = x1 - x0 - gap
+                n_colors = len(codes_in_cat)
+                color_width = block_inner_width / n_colors
+                for j, c in enumerate(codes_in_cat):
+                    color = ww_colors_base.get(c, "#FFFFFF")
+                    legend_ax.add_patch(
+                        mpatches.Rectangle((x0 + j * color_width, 0.5),
+                                           color_width, 0.5,
+                                           facecolor=color, edgecolor='black')
+                    )
+                legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
 
     # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
