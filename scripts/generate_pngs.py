@@ -62,8 +62,15 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Kartenextent wird dynamisch pro Datei aus den Daten (lon/lat) berechnet, 16:9 mit voller Breite
-# -> siehe Berechnung im Loop nach dem Einlesen von lon/lat
+# Kartenextent: nur Deutschland + kleiner Rand (seitlich etwas mehr)
+# Basis sind die Bundesländer-Grenzen aus der GeoJSON
+_germany_bounds = bundeslaender.total_bounds
+_minx, _miny, _maxx, _maxy = _germany_bounds
+_w = _maxx - _minx
+_h = _maxy - _miny
+_pad_x = _w * 0.06  # links/rechts etwas mehr
+_pad_y = _h * 0.03  # oben/unten etwas weniger
+extent = [_minx - _pad_x, _maxx + _pad_x, _miny - _pad_y, _maxy + _pad_y]
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
@@ -128,31 +135,10 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Extent aus lon/lat ableiten und auf 16:9 erweitern, damit die Karte die volle Breite nutzt
-    lon_min, lon_max = np.nanmin(lon), np.nanmax(lon)
-    lat_min, lat_max = np.nanmin(lat), np.nanmax(lat)
-    cx = (lon_min + lon_max) / 2
-    cy = (lat_min + lat_max) / 2
-    width = lon_max - lon_min
-    height = lat_max - lat_min
-    aspect = 16 / 9
-    if width / height < aspect:
-        new_width = height * aspect
-        new_height = height
-    else:
-        new_width = width
-        new_height = width / aspect
-    extent = [
-        cx - new_width / 2,
-        cx + new_width / 2,
-        cy - new_height / 2,
-        cy + new_height / 2,
-    ]
-
-    # Figur und Achsen-Layout: 16:9 Querformat, Karte nimmt oben volle Breite ein
-    fig = plt.figure(figsize=(16, 9))  # 16:9, damit keine seitlichen Balken entstehen
-    # Karte etwas höher beginnen und mehr Höhe geben, damit Breite voll ausgenutzt wird
-    ax = fig.add_axes([0.0, 0.18, 1.0, 0.82], projection=ccrs.PlateCarree())
+    # Figur und Achsen-Layout: 16:9 Querformat, Fokus Deutschland-Extent
+    fig = plt.figure(figsize=(16, 9))
+    # Karte hoch und breit, mit minimalen Rändern oben/unten, seitlich etwas mehr
+    ax = fig.add_axes([0.0, 0.16, 1.0, 0.84], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
     ax.set_axis_off()  # Achsen komplett ausblenden für randlose Karte
 
@@ -183,16 +169,16 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.COASTLINE)
 
     # Footer (Titel, Laufzeit, Uhrzeit) direkt unter der Karte
-    footer_ax = fig.add_axes([0.0, 0.11, 1.0, 0.09])  # etwas tiefer, damit Karte höher wird
+    footer_ax = fig.add_axes([0.0, 0.10, 1.0, 0.08])  # noch etwas kompakter
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
-    footer_ax.text(0.01, 0.7, left_text, fontsize=11, fontweight="bold", va="top", ha="left")
-    footer_ax.text(0.99, 0.7, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=11, va="top", ha="right")
+    footer_ax.text(0.01, 0.8, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.99, 0.8, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
 
-    # Legende ganz unten (volle Breite)
+    # Legende ganz unten (volle Breite, kompakter)
     if var_type == "t2m":
-        cbar_ax = fig.add_axes([0.03, 0.03, 0.94, 0.04])  # volle Breite
+        cbar_ax = fig.add_axes([0.03, 0.02, 0.94, 0.035])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
@@ -201,7 +187,7 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.ax.set_facecolor("white")
     else:
         # Legende für WW
-        legend_ax = fig.add_axes([0.03, 0.01, 0.94, 0.05])  # volle Breite
+        legend_ax = fig.add_axes([0.03, 0.01, 0.94, 0.045])
         legend_ax.axis("off")
         categories_present = [(label, codes) for label, codes in ww_categories.items()]
         n_categories = len(categories_present)
