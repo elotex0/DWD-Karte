@@ -79,8 +79,8 @@ ymax = _maxy
 h = ymax - ymin
 
 # Deutschland mittig, links/rechts etwas Nachbarländer
-left_pad_factor = 0.25
-right_pad_factor = 0.25
+left_pad_factor = 0.02
+right_pad_factor = 0.02
 xmin = _minx - _w * left_pad_factor
 xmax = _maxx + _w * right_pad_factor
 
