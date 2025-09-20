@@ -63,7 +63,13 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 # Kartenextent für Deutschland
 germany_bounds = bundeslaender.total_bounds
-extent = [germany_bounds[0]-1, germany_bounds[2]+1, germany_bounds[1]-1, germany_bounds[3]+1]
+# Kartenextent für Deutschland (mehr links/rechts, weniger oben/unten)
+extent = [
+    germany_bounds[0] - 2,  # links etwas mehr
+    germany_bounds[2] + 2,  # rechts etwas mehr
+    germany_bounds[1] - 0.5,  # unten nur minimaler Rand
+    germany_bounds[3] + 0.5   # oben nur minimaler Rand
+]
 
 # Funktion für WW-Legende unterhalb der Karte
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
