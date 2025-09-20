@@ -22,9 +22,12 @@ os.makedirs(output_dir, exist_ok=True)
 # Geo-Daten
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 cities = pd.DataFrame({
-    'name': ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Dresden', 'Stuttgart', 'Düsseldorf'],
-    'lat': [52.52, 53.55, 48.14, 50.94, 50.11, 51.05, 48.78, 51.23],
-    'lon': [13.40, 9.99, 11.57, 6.96, 8.68, 13.73, 9.18, 6.78]
+    'name': ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Dresden', 'Stuttgart', 'Düsseldorf',
+             'Nürnberg', 'Erfurt', 'Leipzig', 'Bremen', 'Saarbrücken', 'Hannover'],
+    'lat': [52.52, 53.55, 48.14, 50.94, 50.11, 51.05, 48.78, 51.23,
+            49.45, 50.98, 51.34, 53.08, 49.24, 52.37],
+    'lon': [13.40, 9.99, 11.57, 6.96, 8.68, 13.73, 9.18, 6.78,
+            11.08, 11.03, 12.37, 8.80, 6.99, 9.73]
 })
 
 ignore_codes = {4}
@@ -152,7 +155,8 @@ for filename in sorted(os.listdir(data_dir)):
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
     # Figure mit fixen Pixeln
-    fig = plt.figure(figsize=(FIG_W_PX/100, FIG_H_PX/100), dpi=100)
+    scale = 0.95
+    fig = plt.figure(figsize=(FIG_W_PX/100*scale, FIG_H_PX/100*scale), dpi=100)
 
     # Karte horizontal gestreckt
     ax = fig.add_axes([0.0, BOTTOM_AREA_PX / FIG_H_PX, 1.0, TOP_AREA_PX / FIG_H_PX],
@@ -187,9 +191,16 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
+    # ---- Schwarzer Rahmen um die Karte ----
+    border_color = "black"
+    border_width = 2
+    rect = mpatches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, fill=False,
+                              color=border_color, linewidth=border_width)
+    ax.add_patch(rect)
+
     # Legende unten
     legend_h_px = 50
-    legend_bottom_px = 15
+    legend_bottom_px = 35
     if var_type == "t2m":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
