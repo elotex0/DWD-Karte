@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import matplotlib.patheffects as path_effects
 from zoneinfo import ZoneInfo
 import numpy as np
 from matplotlib.colors import ListedColormap
@@ -170,9 +171,25 @@ for filename in sorted(os.listdir(data_dir)):
     
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
+    
     for _, city in cities.iterrows():
-        ax.plot(city["lon"], city["lat"], "ko", markersize=4)
-        ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=8)
+        # Marker: schwarz mit weißer Umrandung
+        ax.plot(
+            city["lon"], city["lat"], "o",
+            markersize=6,
+            markerfacecolor="black",
+            markeredgecolor="white",
+            markeredgewidth=1.5,
+            zorder=5
+        )
+        # Text mit weißem Rand für bessere Lesbarkeit
+        txt = ax.text(
+            city["lon"] + 0.1, city["lat"] + 0.1, city["name"],
+            fontsize=8, color="black",
+            zorder=6
+        )
+        txt.set_path_effects([path_effects.withStroke(linewidth=1.5, foreground="white")])
+    
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
