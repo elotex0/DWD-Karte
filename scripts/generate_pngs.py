@@ -140,8 +140,9 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Figur und Achsen-Layout: Querformat, Karte nimmt oben volle Breite ein
     fig = plt.figure(figsize=(12, 8))  # Querformat
-    ax = fig.add_axes([0.0, 0.22, 1.0, 0.78], projection=ccrs.PlateCarree())
+    ax = fig.add_axes([0, 0.22, 1, 0.78], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
+    ax.set_axis_off()  # Achsen komplett ausblenden für randlose Karte
 
     # Plot
     if var_type == "t2m":
@@ -213,5 +214,5 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Speichern
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches='tight')
+    plt.savefig(os.path.join(output_dir, outname), dpi=150, bbox_inches=None)
     plt.close()
