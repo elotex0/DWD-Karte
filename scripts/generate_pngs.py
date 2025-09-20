@@ -100,8 +100,8 @@ extent = [xmin, xmax, ymin, ymax]
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
-    legend_height = 0.05
-    legend_ax = fig.add_axes([0.1, 0.01, 0.8, legend_height])
+    legend_height = 0.12
+    legend_ax = fig.add_axes([0.05, 0.01, 0.9, legend_height])
     legend_ax.axis("off")
     categories_present = [(label, codes) for label, codes in ww_categories.items()]
     n_categories = len(categories_present)
@@ -109,7 +109,7 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
         return
     total_width = 1.0
     block_width = total_width / n_categories
-    gap = 0.02 * block_width
+    gap = 0.05 * block_width
     for i, (label, codes_in_cat) in enumerate(categories_present):
         x0 = i * block_width
         x1 = (i + 1) * block_width
@@ -119,11 +119,11 @@ def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
         for j, c in enumerate(codes_in_cat):
             color = ww_colors_base.get(c, "#FFFFFF")
             legend_ax.add_patch(
-                mpatches.Rectangle((x0 + j * color_width, 0.65),
-                                   color_width, 0.7,
+                mpatches.Rectangle((x0 + j * color_width, 0.3),
+                                   color_width, 0.6,
                                    facecolor=color, edgecolor='black')
             )
-        legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
+        legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='bottom', fontsize=10)
 
 # Schleife über Dateien
 for filename in sorted(os.listdir(data_dir)):
