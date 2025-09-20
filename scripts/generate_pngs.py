@@ -62,15 +62,37 @@ t2m_colors = [
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Kartenextent: nur Deutschland + kleiner Rand (seitlich etwas mehr)
-# Basis sind die Bundesländer-Grenzen aus der GeoJSON
-_germany_bounds = bundeslaender.total_bounds
-_minx, _miny, _maxx, _maxy = _germany_bounds
+# Ziel-Pixelmaße und Ziel-Seitenverhältnis für die Kartenfläche oben
+FIG_W_PX, FIG_H_PX = 880, 830
+BOTTOM_AREA_PX = 179
+TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
+TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
+
+# Kartenextent: Deutschland + kleiner Rand, an TARGET_ASPECT angepasst
+_minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
 _w = _maxx - _minx
 _h = _maxy - _miny
-_pad_x = _w * 0.06  # links/rechts etwas mehr
-_pad_y = _h * 0.03  # oben/unten etwas weniger
-extent = [_minx - _pad_x, _maxx + _pad_x, _miny - _pad_y, _maxy + _pad_y]
+base_pad_x = _w * 0.05  # seitlich etwas Rand
+base_pad_y = _h * 0.03  # oben/unten etwas weniger
+xmin = _minx - base_pad_x
+xmax = _maxx + base_pad_x
+ymin = _miny - base_pad_y
+ymax = _maxy + base_pad_y
+w = xmax - xmin
+h = ymax - ymin
+if w / h < TARGET_ASPECT:
+    # zu schmal → Breite erweitern
+    needed_w = h * TARGET_ASPECT
+    extra = (needed_w - w) / 2
+    xmin -= extra
+    xmax += extra
+else:
+    # zu flach → Höhe erweitern
+    needed_h = w / TARGET_ASPECT
+    extra = (needed_h - h) / 2
+    ymin -= extra
+    ymax += extra
+extent = [xmin, xmax, ymin, ymax]
 
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
@@ -135,20 +157,18 @@ for filename in sorted(os.listdir(data_dir)):
         valid_time_utc = valid_time_utc[0]
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figur und Achsen-Layout mit exakten Pixeln: 880x830 gesamt, Karte 877x646, unten 179 px
+    # Figur und Achsen-Layout mit exakten Pixeln: 880x830 gesamt, Kartenbereich oben 880x651, unten 179 px
     FIG_W_PX, FIG_H_PX = 880, 830
-    MAP_W_PX, MAP_H_PX = 877, 646
-    BOTTOM_AREA_PX = 179  # Titel/Legende
-    LEFT_MARGIN_PX = (FIG_W_PX - MAP_W_PX) / 2  # symmetrisch links/rechts
+    TOP_H_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
 
     # Figure mit fixen Pixeln (dpi so wählen, dass figsize*dpi=Pixel)
     fig = plt.figure(figsize=(FIG_W_PX/100, FIG_H_PX/100), dpi=100)
 
-    # Normierte Achsenkoordinaten aus Pixeln berechnen
-    ax_left = LEFT_MARGIN_PX / FIG_W_PX
+    # Kartenachse füllt die gesamte Breite oben (keine weißen Ränder links/rechts)
+    ax_left = 0.0
     ax_bottom = BOTTOM_AREA_PX / FIG_H_PX
-    ax_width = MAP_W_PX / FIG_W_PX
-    ax_height = MAP_H_PX / FIG_H_PX
+    ax_width = 1.0
+    ax_height = TOP_H_PX / FIG_H_PX
 
     ax = fig.add_axes([ax_left, ax_bottom, ax_width, ax_height], projection=ccrs.PlateCarree())
     ax.set_extent(extent, crs=ccrs.PlateCarree())
@@ -180,29 +200,16 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
 
-    # Footer und Legendenbereich mit exakten Pixelhöhen: 179 px total unten
-    footer_top_px = BOTTOM_AREA_PX  # beginnt bei 0, reicht hoch bis 179 px
+    # Legende ganz unten (immer unten), darüber der Titel
+    # Wir teilen die 179 px: Legende 69 px unten, Titel 110 px darüber
+    legend_h_px = 69
+    footer_h_px = BOTTOM_AREA_PX - legend_h_px  # 110 px
 
-    # Footer-Achse (Text) ~ 110 px hoch
-    footer_h_px = 110
-    footer_ax = fig.add_axes([
-        0.0,
-        0.0 + (0 / FIG_H_PX),
-        1.0,
-        footer_h_px / FIG_H_PX
-    ])
-    footer_ax.axis("off")
-    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
-    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
-    footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
-    footer_ax.text(0.99, 0.85, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
-
-    # Legendenbereich ~ 69 px hoch (179 - 110)
-    legend_h_px = max(1, BOTTOM_AREA_PX - footer_h_px)
+    # Legende (ganz unten)
     if var_type == "t2m":
         cbar_ax = fig.add_axes([
             0.03,
-            (footer_h_px) / FIG_H_PX,
+            0.0,
             0.94,
             legend_h_px / FIG_H_PX
         ])
@@ -215,7 +222,7 @@ for filename in sorted(os.listdir(data_dir)):
     else:
         legend_ax = fig.add_axes([
             0.03,
-            (footer_h_px) / FIG_H_PX,
+            0.0,
             0.94,
             legend_h_px / FIG_H_PX
         ])
@@ -240,6 +247,19 @@ for filename in sorted(os.listdir(data_dir)):
                                            facecolor=color, edgecolor='black')
                     )
                 legend_ax.text((x0 + x1)/2, 0.25, label, ha='center', va='center', fontsize=8)
+
+    # Footer (Titel) direkt über der Legende
+    footer_ax = fig.add_axes([
+        0.0,
+        legend_h_px / FIG_H_PX,
+        1.0,
+        footer_h_px / FIG_H_PX
+    ])
+    footer_ax.axis("off")
+    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
+    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}Z), Deutscher Wetterdienst"
+    footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.99, 0.85, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right")
 
     # Speichern mit exakter Pixelgröße 880x830
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
