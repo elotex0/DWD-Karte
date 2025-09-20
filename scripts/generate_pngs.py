@@ -26,7 +26,7 @@ cities = pd.DataFrame({
     'lon': [13.40, 9.99, 11.57, 6.96, 8.68, 13.73, 9.18, 6.78]
 })
 
-ignore_codes = {99}
+ignore_codes = {4}
 
 # WW-Farben
 ww_colors_base = {
