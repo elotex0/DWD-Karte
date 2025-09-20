@@ -94,8 +94,6 @@ if current_w < needed_w:
 
 extent = [xmin, xmax, ymin, ymax]
 
-
-
 # WW-Legende unten
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
     legend_height = 0.05
@@ -203,28 +201,27 @@ for filename in sorted(os.listdir(data_dir)):
     ax.add_feature(cfeature.COASTLINE)
 
     # Legende ganz unten (immer unten), darüber der Titel
-    # Wir teilen die 179 px: Legende 69 px unten, Titel 110 px darüber
-    legend_h_px = 69
-    footer_h_px = BOTTOM_AREA_PX - legend_h_px  # 110 px
+    # Wir teilen die 179 px: Legende kleiner und nach oben verschoben
+    legend_h_px = 50    # kleiner
+    legend_bottom_px = 15  # leicht nach oben
 
-    # Legende (ganz unten)
     if var_type == "t2m":
         cbar_ax = fig.add_axes([
             0.03,
-            0.0,
+            legend_bottom_px / FIG_H_PX,
             0.94,
             legend_h_px / FIG_H_PX
         ])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
         cbar.set_ticks(list(range(-30, 45, 5)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
-        cbar.ax.tick_params(colors="black", labelsize=8)
+        cbar.ax.tick_params(colors="black", labelsize=7)  # Schrift etwas kleiner
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     else:
         legend_ax = fig.add_axes([
             0.03,
-            0.0,
+            legend_bottom_px / FIG_H_PX,
             0.94,
             legend_h_px / FIG_H_PX
         ])
@@ -253,9 +250,9 @@ for filename in sorted(os.listdir(data_dir)):
     # Footer (Titel) direkt über der Legende
     footer_ax = fig.add_axes([
         0.0,
-        legend_h_px / FIG_H_PX,
+        (legend_bottom_px + legend_h_px) / FIG_H_PX,
         1.0,
-        footer_h_px / FIG_H_PX
+        (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px) / FIG_H_PX
     ])
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
@@ -265,6 +262,5 @@ for filename in sorted(os.listdir(data_dir)):
 
     # Speichern mit exakter Pixelgröße 880x830
     outname = f"{var_type}_{pd.to_datetime(valid_time_utc):%Y%m%d_%H%M}.png"
-    # Da Figure auf dpi=100 und figsize=(8.8, 8.3) gesetzt ist, ergibt das exakt 880x830
     plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
     plt.close()
