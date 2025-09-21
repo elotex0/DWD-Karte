@@ -55,9 +55,6 @@ jobs:
           DATE=$(date -u +%Y%m%d)
           echo "DATE=$DATE" >> $GITHUB_ENV
 
-      - name: Clean old PNGs for current RUN
-        run: rm -rf pngs/${{ env.RUN }} || true
-
       - name: Download t2m GRIB2 files
         run: |
           mkdir -p data/t2m
@@ -84,6 +81,10 @@ jobs:
             fi
           done
 
+      - name: Remove old PNGs of current RUN from repo
+        run: |
+          git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
+
       - name: Generate PNGs
         run: |
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
@@ -94,10 +95,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          # Alte PNGs des aktuellen Runs aus dem Repo entfernen, falls sie existieren
-          git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
-
-          # Neue PNGs adden
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
 
