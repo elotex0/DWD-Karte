@@ -97,6 +97,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+          git rm -r pngs/${{ env.RUN }} || true
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
