@@ -56,15 +56,14 @@ ww_categories = {
 }
 
 # Temperaturfarbskala
-t2m_bounds = list(range(-30, 46, 2))
+t2m_bounds = list(range(-20, 41, 2))
 t2m_colors = [
-    "#001070", "#002090", "#0030c0", "#0040e0", "#0050ff", "#0068ff",
-    "#0080ff", "#0098ff", "#00b0ff", "#00c8ff", "#00e0ff", "#00f8ff",
-    "#40ffc0", "#70ff90", "#a0ff60", "#c8ff30", "#e0ff00", "#f0ef00",
-    "#ffff00", "#ffe000", "#ffc000", "#ffa000", "#ff8000", "#ff6000",
-    "#ff4000", "#ff2000", "#ff0000", "#e00000", "#c00000", "#a00000",
-    "#800000", "#660000", "#550000", "#440000", "#330000", "#220000",
-    "#110000"
+    "#000080", "#0010A0", "#0020C0", "#0030E0", "#0050FF",
+    "#0070FF", "#0090FF", "#00B0FF", "#00D0FF", "#00FFFF",
+    "#40FFDF", "#80FFBF", "#B0FF90", "#D0FF60", "#F0FF30",
+    "#FFFF00", "#FFE000", "#FFC000", "#FFA000", "#FF8000",
+    "#FF6000", "#FF4000", "#FF2000", "#FF0000", "#E00000",
+    "#C00000", "#A00000", "#800000", "#600000", "#400000"
 ]
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
@@ -212,7 +211,7 @@ for filename in sorted(os.listdir(data_dir)):
     if var_type == "t2m":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
-        cbar.set_ticks(list(range(-30, 46, 2)))
+        cbar.set_ticks(list(range(-20, 41, 2)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
