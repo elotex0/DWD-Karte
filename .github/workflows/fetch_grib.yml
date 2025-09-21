@@ -38,7 +38,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-
       - name: Set RUN and DATE
         run: |
           HOUR=$(date -u +%H)
@@ -56,8 +55,8 @@ jobs:
           DATE=$(date -u +%Y%m%d)
           echo "DATE=$DATE" >> $GITHUB_ENV
 
-      - name: Clean old PNGs
-        run: rm -rf pngs/* || true
+      - name: Clean old PNGs for current RUN
+        run: rm -rf pngs/${{ env.RUN }} || true
 
       - name: Download t2m GRIB2 files
         run: |
@@ -92,15 +91,15 @@ jobs:
 
       - name: Commit PNGs
         run: |
-            git config user.name "github-actions"
-            git config user.email "actions@github.com"
-        
-            # Alte PNGs des Runs aus dem Repo entfernen, falls sie noch existieren
-            git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
-        
-            # Neue PNGs adden
-            git add pngs/${{ env.RUN }}/t2m/* || true
-            git add pngs/${{ env.RUN }}/ww/* || true
-        
-            git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
-            git push
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # Alte PNGs des aktuellen Runs aus dem Repo entfernen, falls sie existieren
+          git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
+
+          # Neue PNGs adden
+          git add pngs/${{ env.RUN }}/t2m/* || true
+          git add pngs/${{ env.RUN }}/ww/* || true
+
+          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
+          git push
