@@ -36,10 +36,10 @@ ignore_codes = {4}
 ww_colors_base = {
     0: "#FFFFFF", 1: "#D3D3D3", 2: "#A9A9A9", 3: "#696969",
     45: "#FFFF00", 48: "#FFD700",
-    56: "#FFA500", 57: "#FF8C00",
-    51: "#90EE90", 53: "#32CD32", 55: "#006400",
-    61: "#90EE90", 63: "#32CD32", 65: "#006400",
-    80: "#90EE90", 81: "#32CD32", 82: "#006400",
+    56: "#FFA500", 57: "#C06A00",
+    51: "#A3FFA3", 53: "#33FF33", 55: "#006600",
+    61: "#33FF33", 63: "#009900", 65: "#006600",
+    80: "#33FF33", 81: "#009900", 82: "#006600",
     66: "#FF6347", 67: "#8B0000",
     71: "#ADD8E6", 73: "#6495ED", 75: "#00008B",
     95: "#FF77FF", 96: "#C71585", 99: "#C71585"
@@ -47,20 +47,24 @@ ww_colors_base = {
 
 ww_categories = {
     "Bewölkung": [0, 1 , 2, 3],
-    "Nebel": [45, 48],
+    "Nebel": [45],
     "Schneeregen": [56, 57],
-    "Regen": [51, 53, 55],
+    "Regen": [51, 61, 63, 65],
     "gefr. Regen": [66, 67],
     "Schnee": [71, 73, 75],
     "Gewitter": [95,96],
 }
 
 # Temperaturfarbskala
-t2m_bounds = list(range(-30, 45, 5))
+t2m_bounds = list(range(-30, 46, 2))
 t2m_colors = [
-    "#001070", "#0020c2", "#0040ff", "#0080ff", "#00c0ff", "#00ffff",
-    "#80ff80", "#c0ff00", "#ffff00", "#ffcc00", "#ff8000", "#ff4000",
-    "#ff0000", "#990000"
+    "#001070", "#001890", "#0020c2", "#0030e0", "#0040ff", "#0050ff",
+    "#0060ff", "#0070ff", "#0080ff", "#0090ff", "#00a0ff", "#00b0ff",
+    "#00c0ff", "#00d0ff", "#00e0ff", "#00f0ff", "#00ffff", "#40ffbf",
+    "#80ff80", "#a0ff40", "#c0ff00", "#e0df00", "#ffff00", "#ffdf00",
+    "#ffcc00", "#ffb000", "#ff9500", "#ff8000", "#ff6000", "#ff4000",
+    "#ff2000", "#ff0000", "#e00000", "#c00000", "#b00000", "#990000",
+    "#660000"
 ]
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
@@ -83,8 +87,8 @@ h = ymax - ymin
 
 # Deutschland mittig, links/rechts etwas Nachbarländer
 # Deutschland leicht nach rechts verschoben, links/rechts etwas Nachbarländer
-left_pad_factor = 0.42
-right_pad_factor = 0.42
+left_pad_factor = 0.56
+right_pad_factor = 0.34
 xmin = _minx - _w * left_pad_factor
 xmax = _maxx + _w * right_pad_factor
 
@@ -190,7 +194,7 @@ for filename in sorted(os.listdir(data_dir)):
     for _, city in cities.iterrows():
         ax.plot(city["lon"], city["lat"], "o", markersize=6, markerfacecolor="black",
                 markeredgecolor="white", markeredgewidth=1.5, zorder=5)
-        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=9.5, color="black", zorder=6)
+        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=9, color="black", weight="bold", zorder=6)
         txt.set_path_effects([path_effects.withStroke(linewidth=1.5, foreground="white")])
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
@@ -208,7 +212,7 @@ for filename in sorted(os.listdir(data_dir)):
     if var_type == "t2m":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
-        cbar.set_ticks(list(range(-30, 45, 5)))
+        cbar.set_ticks(list(range(-30, 46, 2)))
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
@@ -222,10 +226,10 @@ for filename in sorted(os.listdir(data_dir)):
     footer_ax.axis("off")
     left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
-    footer_ax.text(0.01, 0.85, left_text, fontsize=10, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
 
     # Rechter Text: Prognose für + Datum/Uhrzeit fett
-    footer_ax.text(0.778, 0.90, "Prognose für:", fontsize=10, va="top", ha="left", fontweight="bold")
+    footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
     footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=10, va="top", ha="right", fontweight="bold")
 
     # Speichern
