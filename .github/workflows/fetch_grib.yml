@@ -59,41 +59,40 @@ jobs:
         run: |
           mkdir -p data/t2m
           cd data/t2m
-          for i in $(seq 0 47); do
-            i_padded=$(printf "%03d" $i)
+          seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
+            i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
             wget -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
             if [ -f "t2m_${i_padded}.grib2.bz2" ]; then
               bunzip2 -f t2m_${i_padded}.grib2.bz2
             fi
-          done
-
+          '
+      
       - name: Download ww GRIB2 files
         run: |
           mkdir -p data/ww
           cd data/ww
-          for i in $(seq 1 48); do
-            i_padded=$(printf "%03d" $i)
+          seq 1 48 | xargs -n 1 -P 8 -I{} bash -c '
+            i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_ww.grib2.bz2"
             wget -O ww_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
             if [ -f "ww_${i_padded}.grib2.bz2" ]; then
               bunzip2 -f ww_${i_padded}.grib2.bz2
             fi
-          done
-
+          '
+      
       - name: Download tp GRIB2 files
         run: |
           mkdir -p data/tp
           cd data/tp
-          for i in $(seq 0 47); do
-            i_padded=$(printf "%03d" $i)
+          seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
+            i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_tot_prec.grib2.bz2"
             wget -O tot_prec_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
             if [ -f "tot_prec_${i_padded}.grib2.bz2" ]; then
               bunzip2 -f tot_prec_${i_padded}.grib2.bz2
             fi
-          done
-
+          '
       - name: Remove old PNGs of current RUN from repo
         run: |
           git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
