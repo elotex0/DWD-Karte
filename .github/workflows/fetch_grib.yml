@@ -81,6 +81,19 @@ jobs:
             fi
           done
 
+      - name: Download tp GRIB2 files
+        run: |
+          mkdir -p data/tp
+          cd data/tp
+          for i in $(seq 1 48); do
+            i_padded=$(printf "%03d" $i)
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tp/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_tp.grib2.bz2"
+            wget -O tp_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "tp_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f tp_${i_padded}.grib2.bz2
+            fi
+          done
+
       - name: Remove old PNGs of current RUN from repo
         run: |
           git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
@@ -89,6 +102,7 @@ jobs:
         run: |
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
+          python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
 
       - name: Commit PNGs
         run: |
@@ -97,6 +111,7 @@ jobs:
 
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
+          git add pngs/${{ env.RUN }}/tp/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
