@@ -2,7 +2,7 @@ name: Fetch ICON-D2 GRIB2 and Generate PNGs
 
 on:
   schedule:
-    - cron: '30 1 * * *'
+    - cron: '30 0 * * *'
     - cron: '30 4 * * *'
     - cron: '30 7 * * *'
     - cron: '30 10 * * *'
