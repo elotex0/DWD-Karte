@@ -1,5 +1,9 @@
 name: Fetch ICON-D2 GRIB2 and Generate PNGs
 
+permissions:
+  contents: write
+  actions: write
+
 on:
   schedule:
     - cron: '20 0 * * *'
@@ -13,8 +17,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  fetch_and_generate:
+  fetch_data:
     runs-on: ubuntu-latest
+    # expose RUN and DATE as job outputs so other jobs can use them
+    outputs:
+      RUN: ${{ steps.set_vars.outputs.RUN }}
+      DATE: ${{ steps.set_vars.outputs.DATE }}
 
     steps:
       - name: Checkout Repo
@@ -27,18 +35,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Cache Python packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Set RUN and DATE
+      - id: set_vars
+        name: Set RUN and DATE
         run: |
           HOUR=$(date -u +%H)
           case $HOUR in
@@ -51,66 +52,161 @@ jobs:
             19|20|21) RUN=18 ;;
             22|23)    RUN=21 ;;
           esac
-          echo "RUN=$RUN" >> $GITHUB_ENV
           DATE=$(date -u +%Y%m%d)
+
+          # export for following steps in this job
+          echo "RUN=$RUN" >> $GITHUB_ENV
           echo "DATE=$DATE" >> $GITHUB_ENV
 
-      - name: Download t2m GRIB2 files
+          # set as step outputs so job outputs pick them up
+          echo "RUN=$RUN" >> $GITHUB_OUTPUT
+          echo "DATE=$DATE" >> $GITHUB_OUTPUT
+
+      - name: Download GRIB2 files
         run: |
-          mkdir -p data/t2m
+          mkdir -p data/t2m data/ww data/tp
+
+          # t2m (0..47)
           cd data/t2m
           seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
             i_padded=$(printf "%03d" {})
-            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
-            wget -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
-            if [ -f "t2m_${i_padded}.grib2.bz2" ]; then
-              bunzip2 -f t2m_${i_padded}.grib2.bz2
-            fi
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/$RUN/t_2m/icon-d2_germany_regular-lat-lon_single-level_${DATE}${RUN}_${i_padded}_2d_t_2m.grib2.bz2"
+            wget -q -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "skip $URL"
+            [ -f "t2m_${i_padded}.grib2.bz2" ] && bunzip2 -f t2m_${i_padded}.grib2.bz2
           '
-      
-      - name: Download ww GRIB2 files
-        run: |
-          mkdir -p data/ww
+          cd ../..
+
+          # ww (1..48)
           cd data/ww
           seq 1 48 | xargs -n 1 -P 8 -I{} bash -c '
             i_padded=$(printf "%03d" {})
-            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_ww.grib2.bz2"
-            wget -O ww_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
-            if [ -f "ww_${i_padded}.grib2.bz2" ]; then
-              bunzip2 -f ww_${i_padded}.grib2.bz2
-            fi
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/$RUN/ww/icon-d2_germany_regular-lat-lon_single-level_${DATE}${RUN}_${i_padded}_2d_ww.grib2.bz2"
+            wget -q -O ww_${i_padded}.grib2.bz2 "$URL" || echo "skip $URL"
+            [ -f "ww_${i_padded}.grib2.bz2" ] && bunzip2 -f ww_${i_padded}.grib2.bz2
           '
-      
-      - name: Download tp GRIB2 files
-        run: |
-          mkdir -p data/tp
+          cd ../..
+
+          # tp (0..47)
           cd data/tp
           seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
             i_padded=$(printf "%03d" {})
-            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_tot_prec.grib2.bz2"
-            wget -O tot_prec_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
-            if [ -f "tot_prec_${i_padded}.grib2.bz2" ]; then
-              bunzip2 -f tot_prec_${i_padded}.grib2.bz2
-            fi
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/$RUN/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${DATE}${RUN}_${i_padded}_2d_tot_prec.grib2.bz2"
+            wget -q -O tot_prec_${i_padded}.grib2.bz2 "$URL" || echo "skip $URL"
+            [ -f "tot_prec_${i_padded}.grib2.bz2" ] && bunzip2 -f tot_prec_${i_padded}.grib2.bz2
           '
-      - name: Remove old PNGs of current RUN from repo
-        run: |
-          git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
+          cd ../..
+
+      - name: Upload GRIB2 artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: grib2-data
+          path: data
+
+  generate_pngs:
+    runs-on: ubuntu-latest
+    needs: fetch_data
+    strategy:
+      matrix:
+        variable: [t2m, ww, tp]
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download GRIB2 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: grib2-data
+          path: data
 
       - name: Generate PNGs
+        env:
+          RUN: ${{ needs.fetch_data.outputs.RUN }}
+          DATE: ${{ needs.fetch_data.outputs.DATE }}
         run: |
-          python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
-          python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
-          python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
+          mkdir -p pngs/${RUN}/${{ matrix.variable }}
+          python scripts/generate_pngs.py data/${{ matrix.variable }} pngs/${RUN}/${{ matrix.variable }} ${{ matrix.variable }}
+
+      - name: Upload PNG artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pngs-${{ matrix.variable }}
+          path: pngs/${{ needs.fetch_data.outputs.RUN }}/${{ matrix.variable }}
+
+  commit_pngs:
+    runs-on: ubuntu-latest
+    needs: generate_pngs
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Download PNG artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: tmp_pngs
+
+      - name: Remove old PNGs of current RUN from repo
+        run: |
+          git rm -r --ignore-unmatch pngs/${{ needs.fetch_data.outputs.RUN }} || true
+
+      - name: Move downloaded PNGs into repo
+        run: |
+          RUN=${{ needs.fetch_data.outputs.RUN }}
+          mkdir -p pngs/${RUN}
+          for a in tmp_pngs/*; do
+            [ -d "$a" ] || continue
+            name=$(basename "$a")   # e.g. pngs-t2m
+            var="${name#pngs-}"     # -> t2m
+            mkdir -p pngs/${RUN}/${var}
+            cp -r "$a"/* pngs/${RUN}/${var}/ || true
+          done
 
       - name: Commit PNGs
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          git add pngs/${{ env.RUN }}/t2m/* || true
-          git add pngs/${{ env.RUN }}/ww/* || true
-          git add pngs/${{ env.RUN }}/tp/* || true
+          git add pngs/${{ needs.fetch_data.outputs.RUN }} || true
+          git commit -m "Update ICON-D2 run ${{ needs.fetch_data.outputs.RUN }} for ${{ needs.fetch_data.outputs.DATE }}" || echo "Keine Änderungen zum Commit"
+          # push with token
+          git push https://${GH_PAT}@github.com/${{ github.repository }} HEAD:main
 
-          git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
-          git push
+      - name: Delete workflow artifacts (grib2-data + pngs-*)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # jq wird für JSON parsing verwendet
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          repo="${{ github.repository }}"
+
+          # liste alle artifacts
+          curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$repo/actions/artifacts" \
+            | jq -r '.artifacts[] | "\(.id) \t \(.name)"' \
+            > /tmp/artifacts_list.txt
+
+          while IFS=$'\t' read -r id name; do
+            # lösche grib2-data und alle pngs-* artifacts
+            if [[ "$name" == "grib2-data" || "$name" == pngs-* ]]; then
+              echo "Deleting artifact $name (id: $id)"
+              curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/$repo/actions/artifacts/$id"
+            else
+              echo "Keeping artifact $name"
+            fi
+          done < /tmp/artifacts_list.txt
