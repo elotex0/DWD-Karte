@@ -13,13 +13,17 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from matplotlib.colors import ListedColormap
 
-# Eingabe-/Ausgabe-Verzeichnisse
-data_dir = sys.argv[1]
-output_dir = sys.argv[2]
-var_type = sys.argv[3]  # 't2m' oder 'ww'
+# ------------------------------
+# Eingabe-/Ausgabe
+# ------------------------------
+data_dir = sys.argv[1]        # z.B. "output"
+output_dir = sys.argv[2]      # z.B. "output/maps"
+var_type = sys.argv[3]        # 't2m', 'ww', 'tp'
 os.makedirs(output_dir, exist_ok=True)
 
+# ------------------------------
 # Geo-Daten
+# ------------------------------
 bundeslaender = gpd.read_file("scripts/bundeslaender.geojson")
 cities = pd.DataFrame({
     'name': ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Dresden', 'Stuttgart', 'Düsseldorf',
@@ -32,7 +36,9 @@ cities = pd.DataFrame({
 
 ignore_codes = {4}
 
+# ------------------------------
 # WW-Farben
+# ------------------------------
 ww_colors_base = {
     0: "#FFFFFF", 1: "#D3D3D3", 2: "#A9A9A9", 3: "#696969",
     45: "#FFFF00", 48: "#FFD700",
@@ -44,7 +50,6 @@ ww_colors_base = {
     71: "#ADD8E6", 73: "#6495ED", 75: "#00008B",
     95: "#FF77FF", 96: "#C71585", 99: "#C71585"
 }
-
 ww_categories = {
     "Bewölkung": [0, 1 , 2, 3],
     "Nebel": [45],
@@ -55,7 +60,9 @@ ww_categories = {
     "Gewitter": [95,96],
 }
 
-# Temperaturfarbskala
+# ------------------------------
+# Temperatur-Farben
+# ------------------------------
 t2m_bounds = list(range(-20, 41, 2))
 t2m_colors = [
     "#000080", "#0010A8", "#0020D0", "#0030F8", "#0050FF",
@@ -65,169 +72,183 @@ t2m_colors = [
     "#FF8000", "#FF6000", "#FF4000", "#FF2000", "#FF0000",
     "#E00000", "#C00000", "#A00000", "#800000", "#600000"
 ]
-t2m_cmap = mcolors.ListedColormap(t2m_colors)
+t2m_cmap = ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
-# Ziel-Pixelmaße und Ziel-Seitenverhältnis für die Kartenfläche oben
+# ------------------------------
+# Niederschlags-Farben (tp)
+# ------------------------------
+prec_bounds = [0.1, 0.2, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+               12, 14, 16, 20, 24, 30, 40, 50, 60, 80, 100, 125]
+prec_colors = ListedColormap([
+    "#A8EFFF", "#77CBFF", "#4FAAFF", "#1E90FF", "#0077CC",
+    "#32CD32", "#228B22", "#006400",
+    "#FFFF99", "#FFD700", "#FFA500",
+    "#FF8C00", "#FF4500", "#FF0000", "#B22222",
+    "#800080", "#A0007F", "#C0009F", "#E000BF",
+    "#CC6699", "#996666", "#665555", "#555555", "#323232"
+])
+prec_norm = mcolors.BoundaryNorm(prec_bounds, prec_colors.N)
+
+# ------------------------------
+# Kartenparameter
+# ------------------------------
 FIG_W_PX, FIG_H_PX = 880, 830
 BOTTOM_AREA_PX = 179
-TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX  # 651 px
-TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX   # ~1.3525
+TOP_AREA_PX = FIG_H_PX - BOTTOM_AREA_PX
+TARGET_ASPECT = FIG_W_PX / TOP_AREA_PX
 
-# Bounding Box Deutschland
 _minx, _miny, _maxx, _maxy = bundeslaender.total_bounds
 _w = _maxx - _minx
 _h = _maxy - _miny
-
-# Oben/unten fix an Deutschland
-ymin = _miny
-ymax = _maxy
+ymin, ymax = _miny, _maxy
 h = ymax - ymin
-
-# Deutschland mittig, links/rechts etwas Nachbarländer
-# Deutschland leicht nach rechts verschoben, links/rechts etwas Nachbarländer
 left_pad_factor = 0.56
 right_pad_factor = 0.34
 xmin = _minx - _w * left_pad_factor
 xmax = _maxx + _w * right_pad_factor
-
-# Seitenverhältnis exakt anpassen (880x651)
 needed_w = h * TARGET_ASPECT
 current_w = xmax - xmin
 if current_w < needed_w:
     extra = (needed_w - current_w) / 2
     xmin -= extra
     xmax += extra
-
 extent = [xmin, xmax, ymin, ymax]
 
-# WW-Legende unten
+# ------------------------------
+# WW-Legende Funktion
+# ------------------------------
 def add_ww_legend_bottom(fig, ww_categories, ww_colors_base):
     legend_height = 0.12
     legend_ax = fig.add_axes([0.05, 0.01, 0.9, legend_height])
     legend_ax.axis("off")
-    categories_present = [(label, codes) for label, codes in ww_categories.items()]
-    n_categories = len(categories_present)
-    if n_categories == 0:
-        return
-    total_width = 1.0
-    block_width = total_width / n_categories
-    gap = 0.05 * block_width
-    for i, (label, codes_in_cat) in enumerate(categories_present):
+    for i, (label, codes) in enumerate(ww_categories.items()):
+        n_colors = len(codes)
+        block_width = 1.0 / len(ww_categories)
+        gap = 0.05 * block_width
         x0 = i * block_width
         x1 = (i + 1) * block_width
-        block_inner_width = x1 - x0 - gap
-        n_colors = len(codes_in_cat)
-        color_width = block_inner_width / n_colors
-        for j, c in enumerate(codes_in_cat):
+        inner_width = x1 - x0 - gap
+        color_width = inner_width / n_colors
+        for j, c in enumerate(codes):
             color = ww_colors_base.get(c, "#FFFFFF")
-            legend_ax.add_patch(
-                mpatches.Rectangle((x0 + j * color_width, 0.3),
-                                   color_width, 0.6,
-                                   facecolor=color, edgecolor='black')
-            )
+            legend_ax.add_patch(mpatches.Rectangle((x0 + j * color_width, 0.3),
+                                                  color_width, 0.6,
+                                                  facecolor=color, edgecolor='black'))
         legend_ax.text((x0 + x1)/2, 0.05, label, ha='center', va='bottom', fontsize=10)
 
-# Schleife über Dateien
+# ------------------------------
+# Dateien durchgehen
+# ------------------------------
 for filename in sorted(os.listdir(data_dir)):
     if not filename.endswith(".grib2"):
         continue
     path = os.path.join(data_dir, filename)
     ds = cfgrib.open_dataset(path)
 
-    # Daten
+    # Daten je Typ
     if var_type == "t2m":
         if "t2m" not in ds:
-            print(f"Keine t2m-Variable in {filename}")
+            print(f"Keine t2m in {filename}")
             continue
         data = ds["t2m"].values - 273.15
-    else:
-        varname = next((vn for vn in ds.data_vars if vn.lower() in ["ww", "weather"]), None)
+    elif var_type == "ww":
+        varname = next((vn for vn in ds.data_vars if vn.lower() in ["ww","weather"]), None)
         if varname is None:
-            print(f"Keine WW-Variable in {filename}")
+            print(f"Keine WW in {filename}")
             continue
         data = ds[varname].values
+    elif var_type == "tp":
+        if "tp" not in ds:
+            print(f"Keine TP in {filename}")
+            continue
+        tp_all = ds["tp"].values
+        if tp_all.shape[0] > 1:
+            data = tp_all[1] - tp_all[0]
+        else:
+            data = tp_all[0]
+        data[data < 0.01] = np.nan
+    else:
+        print(f"Unbekannter var_type {var_type}")
+        continue
 
     if data.ndim == 3:
-        data = data[0, :, :]
+        data = data[0]
+
     lon = ds["longitude"].values
     lat = ds["latitude"].values
     run_time_utc = pd.to_datetime(ds["time"].values) if "time" in ds else None
-    valid_time_utc = pd.to_datetime(ds.valid_time.values) if "valid_time" in ds else None
-    if isinstance(valid_time_utc, (np.ndarray, list)):
-        valid_time_utc = valid_time_utc[0]
+    valid_time_utc = pd.to_datetime(ds.valid_time.values[0])
     valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
-    # Figure mit fixen Pixeln
-    scale = 0.90
+    # --------------------------
+    # Figure
+    # --------------------------
+    scale = 0.9
     fig = plt.figure(figsize=(FIG_W_PX/100*scale, FIG_H_PX/100*scale), dpi=100)
-
-    # Karte etwas nach oben verschieben
-    shift_up = 0.02  # 2% der Figurenhöhe nach oben
-    
+    shift_up = 0.02
     ax = fig.add_axes([0.0, BOTTOM_AREA_PX / FIG_H_PX + shift_up, 1.0, TOP_AREA_PX / FIG_H_PX],
                       projection=ccrs.PlateCarree())
-
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
+    ax.set_extent(extent)
     ax.set_axis_off()
-    ax.set_aspect('auto')  # <-- horizontal strecken, weiße Balken weg
+    ax.set_aspect('auto')
 
     # Plot
     if var_type == "t2m":
         im = ax.pcolormesh(lon, lat, data, cmap=t2m_cmap, norm=t2m_norm, shading="auto")
-    else:
+    elif var_type == "ww":
         valid_mask = np.isfinite(data)
-        present_codes = np.unique(data[valid_mask]).astype(int)
-        present_codes = [c for c in present_codes if c in ww_colors_base and c not in ignore_codes]
-        present_codes.sort()
-        colors = [ww_colors_base[c] for c in present_codes]
-        cmap = ListedColormap(colors)
-        code2idx = {c: i for i, c in enumerate(present_codes)}
+        codes = np.unique(data[valid_mask]).astype(int)
+        codes = [c for c in codes if c in ww_colors_base and c not in ignore_codes]
+        codes.sort()
+        cmap = ListedColormap([ww_colors_base[c] for c in codes])
+        code2idx = {c: i for i, c in enumerate(codes)}
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
-        for c, i in code2idx.items():
-            idx_data[data == c] = i
-        im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(colors)-0.5, shading="auto")
+        for c,i in code2idx.items():
+            idx_data[data==c] = i
+        im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(codes)-0.5, shading="auto")
+    elif var_type == "tp":
+        im = ax.pcolormesh(lon, lat, data, cmap=prec_colors, norm=prec_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
     for _, city in cities.iterrows():
         ax.plot(city["lon"], city["lat"], "o", markersize=6, markerfacecolor="black",
                 markeredgecolor="white", markeredgewidth=1.5, zorder=5)
-        txt = ax.text(city["lon"] + 0.1, city["lat"] + 0.1, city["name"], fontsize=9, color="black", weight="bold", zorder=6)
+        txt = ax.text(city["lon"]+0.1, city["lat"]+0.1, city["name"], fontsize=9,
+                      color="black", weight="bold", zorder=6)
         txt.set_path_effects([path_effects.withStroke(linewidth=1.5, foreground="white")])
     ax.add_feature(cfeature.BORDERS, linestyle=":")
     ax.add_feature(cfeature.COASTLINE)
+    ax.add_patch(mpatches.Rectangle((0,0),1,1, transform=ax.transAxes, fill=False, color="black", linewidth=2))
 
-    # ---- Schwarzer Rahmen um die Karte ----
-    border_color = "black"
-    border_width = 2
-    rect = mpatches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, fill=False,
-                              color=border_color, linewidth=border_width)
-    ax.add_patch(rect)
-
-    # Legende unten
+    # Legende
     legend_h_px = 50
     legend_bottom_px = 45
     if var_type == "t2m":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal")
-        cbar.set_ticks(list(range(-20, 41, 2)))
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=t2m_bounds)
         cbar.set_label("Temperatur 2m [°C]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
-    else:
+    elif var_type == "tp":
+        cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=prec_bounds)
+        cbar.set_label("1h Niederschlag [mm/h]", color="black")
+        cbar.ax.tick_params(colors="black", labelsize=7)
+        cbar.outline.set_edgecolor("black")
+        cbar.ax.set_facecolor("white")
+    else:  # ww
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
-    # Footer (Titel) über Legende
-    footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px) / FIG_H_PX, 1.0,
-                              (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px) / FIG_H_PX])
+    # Footer
+    footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px)/FIG_H_PX, 1.0,
+                              (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
-    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m"
+    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m" if var_type=="t2m" else "1h Niederschlag"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
-
-    # Rechter Text: Prognose für + Datum/Uhrzeit fett
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
     footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=12, va="top", ha="right", fontweight="bold")
 
