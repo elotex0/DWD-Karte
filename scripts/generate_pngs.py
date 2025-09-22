@@ -58,12 +58,12 @@ ww_categories = {
 # Temperaturfarbskala
 t2m_bounds = list(range(-20, 41, 2))
 t2m_colors = [
-    "#000080", "#0010A0", "#0020C0", "#0030E0", "#0050FF",
-    "#0070FF", "#0090FF", "#00B0FF", "#00D0FF", "#00FFFF",
-    "#40FFDF", "#80FFBF", "#B0FF90", "#D0FF60", "#F0FF30",
-    "#FFFF00", "#FFE000", "#FFC000", "#FFA000", "#FF8000",
-    "#FF6000", "#FF4000", "#FF2000", "#FF0000", "#E00000",
-    "#C00000", "#A00000", "#800000", "#600000", "#400000"
+    "#000080", "#0010A8", "#0020D0", "#0030F8", "#0050FF",
+    "#007FFF", "#00AFFF", "#00DFFF", "#00FFBF", "#00FF9F",
+    "#00FF7F", "#30FF60", "#60FF40", "#90FF20", "#BFFF00",
+    "#E0FF00", "#FFFF00", "#FFE000", "#FFC000", "#FFA000",
+    "#FF8000", "#FF6000", "#FF4000", "#FF2000", "#FF0000",
+    "#E00000", "#C00000", "#A00000", "#800000", "#600000"
 ]
 t2m_cmap = mcolors.ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
