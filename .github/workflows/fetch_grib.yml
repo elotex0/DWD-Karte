@@ -43,50 +43,56 @@ jobs:
           HOUR=$(date -u +%H)
           case $HOUR in
             00|01|02|03) RUN=00 ;;
-            04|05|06)    RUN=03 ;;
-            07|08|09)    RUN=06 ;;
-            10|11|12)    RUN=09 ;;
-            13|14|15)    RUN=12 ;;
-            16|17|18)    RUN=15 ;;
-            19|20|21)    RUN=18 ;;
-            22|23)       RUN=21 ;;
+            04|05|06) RUN=03 ;;
+            07|08|09) RUN=06 ;;
+            10|11|12) RUN=09 ;;
+            13|14|15) RUN=12 ;;
+            16|17|18) RUN=15 ;;
+            19|20|21) RUN=18 ;;
+            22|23)    RUN=21 ;;
           esac
           echo "RUN=$RUN" >> $GITHUB_ENV
           DATE=$(date -u +%Y%m%d)
           echo "DATE=$DATE" >> $GITHUB_ENV
 
-      - name: Install aria2
-        run: sudo apt-get install -y aria2
-
-      - name: Download all GRIB2 files (parallel with aria2c)
+      - name: Download t2m GRIB2 files
         run: |
-          mkdir -p data/t2m data/ww data/tp
-          cd data
-
-          # t2m
-          for i in $(seq -w 0 47); do
-            echo "dir=t2m" >> urls.txt
-            echo "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_t_2m.grib2.bz2" >> urls.txt
+          mkdir -p data/t2m
+          cd data/t2m
+          for i in $(seq 0 47); do
+            i_padded=$(printf "%03d" $i)
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
+            wget -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "t2m_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f t2m_${i_padded}.grib2.bz2
+            fi
           done
 
-          # ww
-          for i in $(seq -w 1 48); do
-            echo "dir=ww" >> urls.txt
-            echo "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_ww.grib2.bz2" >> urls.txt
+      - name: Download ww GRIB2 files
+        run: |
+          mkdir -p data/ww
+          cd data/ww
+          for i in $(seq 1 48); do
+            i_padded=$(printf "%03d" $i)
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_ww.grib2.bz2"
+            wget -O ww_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "ww_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f ww_${i_padded}.grib2.bz2
+            fi
           done
 
-          # tp
-          for i in $(seq -w 0 47); do
-            echo "dir=tp" >> urls.txt
-            echo "https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i}_2d_tot_prec.grib2.bz2" >> urls.txt
+      - name: Download tp GRIB2 files
+        run: |
+          mkdir -p data/tp
+          cd data/tp
+          for i in $(seq 0 47); do
+            i_padded=$(printf "%03d" $i)
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_tot_prec.grib2.bz2"
+            wget -O tot_prec_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "tot_prec_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f tot_prec_${i_padded}.grib2.bz2
+            fi
           done
-
-          # Download alles parallel
-          aria2c -x 8 -s 8 -j 16 -i urls.txt
-          rm urls.txt
-
-          # Entpacken aller Dateien
-          find . -name "*.bz2" -exec bunzip2 -f {} \;
 
       - name: Remove old PNGs of current RUN from repo
         run: |
