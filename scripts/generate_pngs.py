@@ -159,15 +159,27 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds[varname].values
     elif var_type == "tp":
-        if "tp" not in ds:
-            print(f"Keine TP in {filename}")
+        # Niederschlagsvariable prüfen: tp oder tot_prec
+        tp_var = None
+        for vn in ["tp", "tot_prec"]:
+            if vn in ds:
+                tp_var = vn
+                break
+        if tp_var is None:
+            print(f"Keine Niederschlagsvariable in {filename}")
             continue
-        tp_all = ds["tp"].values
+        
+        tp_all = ds[tp_var].values  # shape: (step, lat, lon)
+
+        # 1h Niederschlag berechnen
         if tp_all.shape[0] > 1:
-            data = tp_all[1] - tp_all[0]
+            data = tp_all[1] - tp_all[0]  # Differenz Step 1 - Step 0
         else:
             data = tp_all[0]
+
+        # Kleine Werte auf NaN setzen
         data[data < 0.01] = np.nan
+
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
