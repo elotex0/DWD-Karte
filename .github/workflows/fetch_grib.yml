@@ -97,7 +97,7 @@ jobs:
           cd ../..
 
       - name: Upload GRIB2 artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: grib2-data
           path: data
@@ -124,7 +124,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Download GRIB2 artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: grib2-data
           path: data
@@ -138,7 +138,7 @@ jobs:
           python scripts/generate_pngs.py data/${{ matrix.variable }} pngs/${RUN}/${{ matrix.variable }} ${{ matrix.variable }}
 
       - name: Upload PNG artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pngs-${{ matrix.variable }}
           path: pngs/${{ needs.fetch_data.outputs.RUN }}/${{ matrix.variable }}
@@ -153,7 +153,7 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Download PNG artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: tmp_pngs
 
