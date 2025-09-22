@@ -190,8 +190,14 @@ for filename in sorted(os.listdir(data_dir)):
     lon = ds["longitude"].values
     lat = ds["latitude"].values
     run_time_utc = pd.to_datetime(ds["time"].values) if "time" in ds else None
-    valid_time_utc = pd.to_datetime(ds.valid_time.values[0])
-    valid_time_local = pd.to_datetime(valid_time_utc).tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
+
+    if "valid_time" in ds:  # einige Variablen haben es direkt
+        valid_time_utc = pd.to_datetime(ds.valid_time.values[0])
+    else:  # selbst berechnen aus time + step
+        step = pd.to_timedelta(ds["step"].values[0])
+        valid_time_utc = run_time_utc + step
+
+    valid_time_local = valid_time_utc.tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
 
     # --------------------------
     # Figure
