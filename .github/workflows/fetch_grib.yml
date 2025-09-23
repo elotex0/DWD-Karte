@@ -98,6 +98,19 @@ jobs:
             fi
           '
 
+      - name: Download DBZ_CMAX GRIB2 files
+        run: |
+          mkdir -p data/dbz_cmax
+          cd data/dbz_cmax
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
+            i_padded=$(printf "%03d" {})
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/dbz_cmax/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_dbz_cmax.grib2.bz2"
+            wget -O dbz_cmax_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "dbz_cmax_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f dbz_cmax_${i_padded}.grib2.bz2
+            fi
+          '
+
       - name: Remove old PNGs of current RUN from repo
         run: |
           git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
@@ -108,6 +121,7 @@ jobs:
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
           python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
           python scripts/generate_pngs.py data/cape_ml pngs/${{ env.RUN }}/cape_ml cape_ml
+          python scripts/generate_pngs.py data/dbz_cmax pngs/${{ env.RUN }}/dbz_cmax dbz_cmax
 
       - name: Commit PNGs
         run: |
@@ -118,6 +132,7 @@ jobs:
           git add pngs/${{ env.RUN }}/ww/* || true
           git add pngs/${{ env.RUN }}/tp/* || true
           git add pngs/${{ env.RUN }}/cape_ml/* || true
+          git add pngs/${{ env.RUN }}/dbz_cmax/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
