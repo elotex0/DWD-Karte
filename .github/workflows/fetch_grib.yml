@@ -1,15 +1,6 @@
 name: Fetch ICON-D2 GRIB2 and Generate PNGs
 
 on:
-  schedule:
-    - cron: '20 0 * * *'
-    - cron: '20 4 * * *'
-    - cron: '20 7 * * *'
-    - cron: '20 10 * * *'
-    - cron: '20 13 * * *'
-    - cron: '20 16 * * *'
-    - cron: '20 19 * * *'
-    - cron: '20 22 * * *'
   workflow_dispatch:
 
 jobs:
