@@ -107,7 +107,7 @@ jobs:
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
           python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
-          python scripts/generate_pngs.py data/cape pngs/${{ env.RUN }}/cape_ml cape_ml
+          python scripts/generate_pngs.py data/cape_ml pngs/${{ env.RUN }}/cape_ml cape_ml
 
       - name: Commit PNGs
         run: |
