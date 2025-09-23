@@ -12,13 +12,16 @@ import matplotlib.patheffects as path_effects
 from zoneinfo import ZoneInfo
 import numpy as np
 from matplotlib.colors import ListedColormap
+import warnings
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ------------------------------
 # Eingabe-/Ausgabe
 # ------------------------------
 data_dir = sys.argv[1]        # z.B. "output"
 output_dir = sys.argv[2]      # z.B. "output/maps"
-var_type = sys.argv[3]        # 't2m', 'ww', 'tp'
+var_type = sys.argv[3]        # 't2m', 'ww', 'tp', 'cape_ml'
 os.makedirs(output_dir, exist_ok=True)
 
 # ------------------------------
@@ -91,6 +94,17 @@ prec_colors = ListedColormap([
 prec_norm = mcolors.BoundaryNorm(prec_bounds, prec_colors.N)
 
 # ------------------------------
+# CAPE-Farben
+# ------------------------------
+cape_bounds = [0, 20, 40, 60, 80, 100, 200, 400, 600, 800, 1000, 1500, 2000, 2500, 3000]
+cape_colors = ListedColormap([
+    "#676767", "#006400", "#008000", "#00CC00", "#66FF00", "#FFFF00", 
+    "#FFCC00", "#FF9900", "#FF6600", "#FF3300", "#FF0000", "#FF0095", 
+    "#FC439F", "#FF88D3", "#FF99FF"
+])
+cape_norm = mcolors.BoundaryNorm(cape_bounds, cape_colors.N)
+
+# ------------------------------
 # Kartenparameter
 # ------------------------------
 FIG_W_PX, FIG_H_PX = 880, 830
@@ -159,7 +173,6 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds[varname].values
     elif var_type == "tp":
-        # Niederschlagsvariable prüfen: tp oder tot_prec
         tp_var = None
         for vn in ["tp", "tot_prec"]:
             if vn in ds:
@@ -168,18 +181,18 @@ for filename in sorted(os.listdir(data_dir)):
         if tp_var is None:
             print(f"Keine Niederschlagsvariable in {filename}")
             continue
-        
-        tp_all = ds[tp_var].values  # shape: (step, lat, lon)
-
-        # 1h Niederschlag berechnen
+        tp_all = ds[tp_var].values
         if tp_all.shape[0] > 1:
-            data = tp_all[1] - tp_all[0]  # Differenz Step 1 - Step 0
+            data = tp_all[1] - tp_all[0]
         else:
             data = tp_all[0]
-
-        # Kleine Werte auf NaN setzen
         data[data < 0.01] = np.nan
-
+    elif var_type == "cape_ml":
+        if "CAPE_ML" not in ds:
+            print(f"Keine CAPE_ML-Variable in {filename}")
+            continue
+        data = ds["CAPE_ML"].values[0, :, :]
+        data[data < 0] = np.nan
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
@@ -191,19 +204,13 @@ for filename in sorted(os.listdir(data_dir)):
     lat = ds["latitude"].values
     run_time_utc = pd.to_datetime(ds["time"].values) if "time" in ds else None
 
-    if "valid_time" in ds:  # manche Variablen haben valid_time direkt
+    if "valid_time" in ds:
         valid_time_raw = ds["valid_time"].values
-        # falls Skalar → direkt, falls Array → erstes Element
-        if np.ndim(valid_time_raw) == 0:
-            valid_time_utc = pd.to_datetime(valid_time_raw)
-        else:
-            valid_time_utc = pd.to_datetime(valid_time_raw[0])
-    else:  # selbst berechnen aus time + step
+        valid_time_utc = pd.to_datetime(valid_time_raw[0]) if np.ndim(valid_time_raw) > 0 else pd.to_datetime(valid_time_raw)
+    else:
         step = pd.to_timedelta(ds["step"].values[0])
         valid_time_utc = run_time_utc + step
-
     valid_time_local = valid_time_utc.tz_localize("UTC").astimezone(ZoneInfo("Europe/Berlin"))
-
 
     # --------------------------
     # Figure
@@ -233,6 +240,8 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(codes)-0.5, shading="auto")
     elif var_type == "tp":
         im = ax.pcolormesh(lon, lat, data, cmap=prec_colors, norm=prec_norm, shading="auto")
+    elif var_type == "cape_ml":
+        im = ax.pcolormesh(lon, lat, data, cmap=cape_colors, norm=cape_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -263,14 +272,21 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
-    else:  # ww
+    elif var_type == "cape_ml":
+        cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=cape_bounds)
+        cbar.set_label("CAPE [J/kg]", color="black")
+        cbar.ax.tick_params(colors="black", labelsize=7)
+        cbar.outline.set_edgecolor("black")
+        cbar.ax.set_facecolor("white")
+    else:
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
     # Footer
     footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px)/FIG_H_PX, 1.0,
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
-    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m" if var_type=="t2m" else "1h Niederschlag"
+    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m" if var_type=="t2m" else "1h Niederschlag" if var_type=="tp" else "CAPE-Index"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
