@@ -11,7 +11,7 @@ import matplotlib.patches as mpatches
 import matplotlib.patheffects as path_effects
 from zoneinfo import ZoneInfo
 import numpy as np
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap
 import warnings
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -21,7 +21,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 # ------------------------------
 data_dir = sys.argv[1]        # z.B. "output"
 output_dir = sys.argv[2]      # z.B. "output/maps"
-var_type = sys.argv[3]        # 't2m', 'ww', 'tp', 'cape_ml'
+var_type = sys.argv[3]        # 't2m', 'ww', 'tp', 'cape_ml', 'dbz_cmax'
 os.makedirs(output_dir, exist_ok=True)
 
 # ------------------------------
@@ -103,6 +103,18 @@ cape_colors = ListedColormap([
     "#FC439F", "#FF88D3", "#FF99FF"
 ])
 cape_norm = mcolors.BoundaryNorm(cape_bounds, cape_colors.N)
+
+# ------------------------------
+# DBZ-CMAX Farben
+# ------------------------------
+dbz_bounds = np.concatenate(([2, 6], np.arange(6, 74, 2)))
+dbz_bounds = np.unique(dbz_bounds)
+dbz_colors = [
+    "#676767", "#0050A0", "#009966", "#00AA00",
+    "#AAAA00", "#AA5500", "#AA0000", "#550055"
+]
+dbz_cmap = LinearSegmentedColormap.from_list("dbz_cmap", dbz_colors, N=len(dbz_bounds)-1)
+dbz_norm = BoundaryNorm(dbz_bounds, dbz_cmap.N)
 
 # ------------------------------
 # Kartenparameter
@@ -193,6 +205,19 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds["CAPE_ML"].values[0, :, :]
         data[data < 0] = np.nan
+    elif var_type == "dbz_cmax":
+    if "DBZ_CMAX" not in ds:
+        print(f"Keine DBZ_CMAX in {filename}")
+        continue
+    dbz_all_steps = ds["DBZ_CMAX"].values
+    
+    # Zeitschritte auswählen und Differenz berechnen
+    dbz_step0 = dbz_all_steps[0, :, :]
+    dbz_step3 = dbz_all_steps[3, :, :]
+    dbz_diff = dbz_step3 - dbz_step0  # Differenz zwischen Step 3 und Step 0
+    dbz_diff[dbz_diff < -100] = np.nan  # Werte < -100 dBZ als fehlend markieren
+    
+    data = dbz_diff
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
@@ -242,6 +267,8 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, data, cmap=prec_colors, norm=prec_norm, shading="auto")
     elif var_type == "cape_ml":
         im = ax.pcolormesh(lon, lat, data, cmap=cape_colors, norm=cape_norm, shading="auto")
+    elif var_type == "dbz_cmax":
+        im = ax.pcolormesh(lon, lat, data, cmap=dbz_cmap, norm=dbz_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -258,21 +285,10 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende
     legend_h_px = 50
     legend_bottom_px = 45
-    if var_type == "t2m":
+    if var_type in ["t2m", "tp", "cape_ml", "dbz_cmax"]:
+        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else cape_bounds if var_type=="cape_ml" else dbz_bounds
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=t2m_bounds)
-        cbar.ax.tick_params(colors="black", labelsize=7)
-        cbar.outline.set_edgecolor("black")
-        cbar.ax.set_facecolor("white")
-    elif var_type == "tp":
-        cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=prec_bounds)
-        cbar.ax.tick_params(colors="black", labelsize=7)
-        cbar.outline.set_edgecolor("black")
-        cbar.ax.set_facecolor("white")
-    elif var_type == "cape_ml":
-        cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
-        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=cape_bounds)
+        cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=bounds)
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
@@ -283,7 +299,14 @@ for filename in sorted(os.listdir(data_dir)):
     footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px)/FIG_H_PX, 1.0,
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
-    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur in 2m (in °C)" if var_type=="t2m" else "Niederschlag, 1Std (in mm)" if var_type=="tp" else "CAPE-Index (in J/kg)"
+    footer_texts = {
+        "ww": "Signifikantes Wetter",
+        "t2m": "Temperatur in 2m (in °C)",
+        "tp": "Niederschlag, 1Std (in mm)",
+        "cape_ml": "CAPE-Index (in J/kg)",
+        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
+    }
+    left_text = footer_texts.get(var_type, var_type)
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
