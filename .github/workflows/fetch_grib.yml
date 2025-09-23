@@ -88,7 +88,7 @@ jobs:
       - name: Download CAPE_ML GRIB2 files
         run: |
           mkdir -p data/cape_ml
-          cd data/cape
+          cd data/cape_ml
           seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
             i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/cape_ml/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_cape_ml.grib2.bz2"
@@ -117,7 +117,7 @@ jobs:
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
           git add pngs/${{ env.RUN }}/tp/* || true
-          git add pngs/${{ env.RUN }}/cape/* || true
+          git add pngs/${{ env.RUN }}/cape_ml/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
