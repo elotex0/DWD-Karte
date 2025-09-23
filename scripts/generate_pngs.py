@@ -217,7 +217,7 @@ for filename in sorted(os.listdir(data_dir)):
         dbz_diff = dbz_step3 - dbz_step0  # Differenz zwischen Step 3 und Step 0
         dbz_diff[dbz_diff < -100] = np.nan  # Werte < -100 dBZ als fehlend markieren
     
-        data = dbz_diff
+        data = dbz_step0
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
