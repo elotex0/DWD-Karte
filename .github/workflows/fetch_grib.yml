@@ -50,7 +50,7 @@ jobs:
         run: |
           mkdir -p data/t2m
           cd data/t2m
-          seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
             i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/t_2m/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_t_2m.grib2.bz2"
             wget -O t2m_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
@@ -63,7 +63,7 @@ jobs:
         run: |
           mkdir -p data/ww
           cd data/ww
-          seq 1 48 | xargs -n 1 -P 8 -I{} bash -c '
+          seq 1 48 | xargs -n 1 -P 12 -I{} bash -c '
             i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/ww/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_ww.grib2.bz2"
             wget -O ww_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
@@ -76,7 +76,7 @@ jobs:
         run: |
           mkdir -p data/tp
           cd data/tp
-          seq 0 47 | xargs -n 1 -P 8 -I{} bash -c '
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
             i_padded=$(printf "%03d" {})
             URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/tot_prec/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_tot_prec.grib2.bz2"
             wget -O tot_prec_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
@@ -84,6 +84,20 @@ jobs:
               bunzip2 -f tot_prec_${i_padded}.grib2.bz2
             fi
           '
+
+      - name: Download CAPE_ML GRIB2 files
+        run: |
+          mkdir -p data/cape
+          cd data/cape
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
+            i_padded=$(printf "%03d" {})
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/cape_ml/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_cape_ml.grib2.bz2"
+            wget -O cape_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "cape_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f cape_${i_padded}.grib2.bz2
+            fi
+          '
+
       - name: Remove old PNGs of current RUN from repo
         run: |
           git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
@@ -93,6 +107,7 @@ jobs:
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
           python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
+          python scripts/generate_pngs.py data/cape pngs/${{ env.RUN }}/cape cape_ml
 
       - name: Commit PNGs
         run: |
@@ -102,6 +117,7 @@ jobs:
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
           git add pngs/${{ env.RUN }}/tp/* || true
+          git add pngs/${{ env.RUN }}/cape/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
