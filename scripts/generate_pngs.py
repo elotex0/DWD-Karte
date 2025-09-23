@@ -183,7 +183,7 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         tp_all = ds[tp_var].values
         if tp_all.shape[0] > 1:
-            data = tp_all[1] - tp_all[0]
+            data = tp_all[3] - tp_all[0]
         else:
             data = tp_all[0]
         data[data < 0.01] = np.nan
