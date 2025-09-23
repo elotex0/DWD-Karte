@@ -87,7 +87,7 @@ jobs:
 
       - name: Download CAPE_ML GRIB2 files
         run: |
-          mkdir -p data/cape
+          mkdir -p data/cape_ml
           cd data/cape
           seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
             i_padded=$(printf "%03d" {})
