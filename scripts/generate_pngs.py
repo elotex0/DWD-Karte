@@ -205,19 +205,19 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds["CAPE_ML"].values[0, :, :]
         data[data < 0] = np.nan
-    elif var_type == "dbz_cmax":
-    if "DBZ_CMAX" not in ds:
-        print(f"Keine DBZ_CMAX in {filename}")
-        continue
-    dbz_all_steps = ds["DBZ_CMAX"].values
+     elif var_type == "dbz_cmax":
+        if "DBZ_CMAX" not in ds:
+            print(f"Keine DBZ_CMAX in {filename}")
+            continue
+        dbz_all_steps = ds["DBZ_CMAX"].values
     
-    # Zeitschritte auswählen und Differenz berechnen
-    dbz_step0 = dbz_all_steps[0, :, :]
-    dbz_step3 = dbz_all_steps[3, :, :]
-    dbz_diff = dbz_step3 - dbz_step0  # Differenz zwischen Step 3 und Step 0
-    dbz_diff[dbz_diff < -100] = np.nan  # Werte < -100 dBZ als fehlend markieren
+        # Zeitschritte auswählen und Differenz berechnen
+        dbz_step0 = dbz_all_steps[0, :, :]
+        dbz_step3 = dbz_all_steps[3, :, :]
+        dbz_diff = dbz_step3 - dbz_step0  # Differenz zwischen Step 3 und Step 0
+        dbz_diff[dbz_diff < -100] = np.nan  # Werte < -100 dBZ als fehlend markieren
     
-    data = dbz_diff
+        data = dbz_diff
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
