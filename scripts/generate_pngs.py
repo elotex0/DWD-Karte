@@ -268,14 +268,12 @@ for filename in sorted(os.listdir(data_dir)):
     elif var_type == "tp":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=prec_bounds)
-        cbar.set_label("1h Niederschlag [mm/h]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
     elif var_type == "cape_ml":
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=cape_bounds)
-        cbar.set_label("CAPE [J/kg]", color="black")
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
@@ -286,7 +284,7 @@ for filename in sorted(os.listdir(data_dir)):
     footer_ax = fig.add_axes([0.0, (legend_bottom_px + legend_h_px)/FIG_H_PX, 1.0,
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
-    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur 2m" if var_type=="t2m" else "1h Niederschlag" if var_type=="tp" else "CAPE-Index"
+    left_text = "Signifikantes Wetter" if var_type=="ww" else "Temperatur in 2m (in °C)" if var_type=="t2m" else "Niederschlag, 1Std (in mm)" if var_type=="tp" else "CAPE-Index (in J/kg)"
     left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
