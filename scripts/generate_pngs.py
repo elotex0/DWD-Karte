@@ -205,7 +205,7 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds["CAPE_ML"].values[0, :, :]
         data[data < 0] = np.nan
-     elif var_type == "dbz_cmax":
+    elif var_type == "dbz_cmax":
         if "DBZ_CMAX" not in ds:
             print(f"Keine DBZ_CMAX in {filename}")
             continue
