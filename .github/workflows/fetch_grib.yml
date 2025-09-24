@@ -117,9 +117,17 @@ jobs:
 
       - name: Generate PNGs
         run: |
+          mkdir -p pngs/${{ env.RUN }}/t2m
+          mkdir -p pngs/${{ env.RUN }}/ww
+          mkdir -p pngs/${{ env.RUN }}/tp
+          mkdir -p pngs/${{ env.RUN }}/tp_acc
+          mkdir -p pngs/${{ env.RUN }}/cape_ml
+          mkdir -p pngs/${{ env.RUN }}/dbz_cmax
+
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
           python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
+          python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp_acc tp_acc
           python scripts/generate_pngs.py data/cape_ml pngs/${{ env.RUN }}/cape_ml cape_ml
           python scripts/generate_pngs.py data/dbz_cmax pngs/${{ env.RUN }}/dbz_cmax dbz_cmax
 
@@ -131,6 +139,7 @@ jobs:
           git add pngs/${{ env.RUN }}/t2m/* || true
           git add pngs/${{ env.RUN }}/ww/* || true
           git add pngs/${{ env.RUN }}/tp/* || true
+          git add pngs/${{ env.RUN }}/tp_acc/* || true
           git add pngs/${{ env.RUN }}/cape_ml/* || true
           git add pngs/${{ env.RUN }}/dbz_cmax/* || true
 
