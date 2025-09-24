@@ -84,12 +84,11 @@ t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 prec_bounds = [0.1, 0.2, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                12, 14, 16, 20, 24, 30, 40, 50, 60, 80, 100, 125]
 prec_colors = ListedColormap([
-    "#A8EFFF", "#77CBFF", "#4FAAFF", "#1E90FF", "#0077CC",
-    "#32CD32", "#228B22", "#006400",
-    "#FFFF99", "#FFD700", "#FFA500",
-    "#FF8C00", "#FF4500", "#FF0000", "#B22222",
-    "#800080", "#A0007F", "#C0009F", "#E000BF",
-    "#CC6699", "#996666", "#665555", "#555555", "#323232"
+    "#B4D7FF","#75BAFF","#349AFF","#0582FF","#0069D2",
+    "#003680","#148F1B","#1ACF06","#64ED07","#FFF32B",
+    "#E9DC01","#F06000","#FF7F26","#FFA66A","#F94E78",
+    "#F71E53","#BE0000","#880000","#64007F","#C201FC",
+    "#DD66FE","#EBA6FF","#F9E7FF","#D4D4D4","#969696"
 ])
 prec_norm = mcolors.BoundaryNorm(prec_bounds, prec_colors.N)
 
@@ -110,8 +109,8 @@ cape_norm = mcolors.BoundaryNorm(cape_bounds, cape_colors.N)
 dbz_bounds = np.concatenate(([2, 6], np.arange(6, 74, 2)))
 dbz_bounds = np.unique(dbz_bounds)
 dbz_colors = [
-    "#676767", "#0050A0", "#009966", "#00AA00",
-    "#AAAA00", "#AA5500", "#AA0000", "#550055"
+    "#676767", "#0783FF", "#00FFAA", "#FFFF00",
+    "#FA7D00", "#FF0303", "#FF00FF", "#C80085"
 ]
 dbz_cmap = LinearSegmentedColormap.from_list("dbz_cmap", dbz_colors, N=len(dbz_bounds)-1)
 dbz_norm = BoundaryNorm(dbz_bounds, dbz_cmap.N)
@@ -292,6 +291,9 @@ for filename in sorted(os.listdir(data_dir)):
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
+
+        if var_type == "tp":
+            cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in prec_bounds])
     else:
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
