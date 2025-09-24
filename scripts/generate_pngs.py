@@ -300,18 +300,22 @@ for filename in sorted(os.listdir(data_dir)):
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
     footer_texts = {
-        "ww": "Signifikantes Wetter",
-        "t2m": "Temperatur in 2m (in °C)",
-        "tp": "Niederschlag, 1Std (in mm)",
-        "cape_ml": "CAPE-Index (in J/kg)",
-        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
-    }
-    left_text = footer_texts.get(var_type, var_type)
-    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
+    "ww": "Signifikantes Wetter",
+    "t2m": "Temperatur in 2m (in °C)",
+    "tp": "Niederschlag, 1Std (in mm)",
+    "cape_ml": "CAPE-Index (in J/kg)",
+    "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
+}
+
+    left_text = footer_texts.get(var_type, var_type) + \
+                f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour:02d}z), Deutscher Wetterdienst" \
+                if run_time_utc is not None else \
+                footer_texts.get(var_type, var_type) + "\nICON-D2 (??z), Deutscher Wetterdienst"
+    
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
-    footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=12, va="top", ha="right", fontweight="bold")
-
+    footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr",
+                   fontsize=12, va="top", ha="right", fontweight="bold")
     # Speichern
     outname = f"{var_type}_{valid_time_local:%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
