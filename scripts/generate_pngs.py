@@ -21,7 +21,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 # ------------------------------
 data_dir = sys.argv[1]        # z.B. "output"
 output_dir = sys.argv[2]      # z.B. "output/maps"
-var_type = sys.argv[3]        # 't2m', 'ww', 'tp', 'cape_ml', 'dbz_cmax'
+var_type = sys.argv[3]        # 't2m', 'ww', 'tp', 'tp_acc', 'cape_ml', 'dbz_cmax'
 os.makedirs(output_dir, exist_ok=True)
 
 # ------------------------------
@@ -79,7 +79,7 @@ t2m_cmap = ListedColormap(t2m_colors)
 t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 # ------------------------------
-# Niederschlags-Farben (tp)
+# Niederschlags-Farben 1h (tp)
 # ------------------------------
 prec_bounds = [0.1, 0.2, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                12, 14, 16, 20, 24, 30, 40, 50, 60, 80, 100, 125]
@@ -91,6 +91,20 @@ prec_colors = ListedColormap([
     "#DD66FE","#EBA6FF","#F9E7FF","#D4D4D4","#969696"
 ])
 prec_norm = mcolors.BoundaryNorm(prec_bounds, prec_colors.N)
+
+# ------------------------------
+# Aufsummierter Niederschlag (tp_acc)
+# ------------------------------
+tp_acc_bounds = [0.1, 1, 2, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100,
+                 125, 150, 175, 200, 250, 300, 400, 500]
+tp_acc_colors = ListedColormap([
+    "#b3e6ff", "#80d4ff", "#4dc2ff", "#1aaeff", "#0099ff",  
+    "#00cc99", "#66ff66", "#ccff33", "#ffff33", "#ffcc33",  
+    "#ff9900", "#ff6600", "#ff3300", "#cc0000", "#990000",  
+    "#800000", "#660033", "#990066", "#cc00cc", "#ff00ff",  
+    "#ff66ff", "#ff99ff", "#ffb3ff", "#ffccff", "#ffe6ff"
+])
+tp_acc_norm = mcolors.BoundaryNorm(tp_acc_bounds, tp_acc_colors.N)
 
 # ------------------------------
 # CAPE-Farben
@@ -184,45 +198,39 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds[varname].values
     elif var_type == "tp":
-        tp_var = None
-        for vn in ["tp", "tot_prec"]:
-            if vn in ds:
-                tp_var = vn
-                break
+        tp_var = next((vn for vn in ["tp","tot_prec"] if vn in ds), None)
         if tp_var is None:
             print(f"Keine Niederschlagsvariable in {filename}")
             continue
         tp_all = ds[tp_var].values
-        if tp_all.shape[0] > 1:
-            data = tp_all[3] - tp_all[0]
-        else:
-            data = tp_all[0]
-        data[data < 0.01] = np.nan
+        data = tp_all[3]-tp_all[0] if tp_all.shape[0]>1 else tp_all[0]
+        data[data<0.01]=np.nan
+    elif var_type == "tp_acc":
+        if "tp" not in ds:
+            print(f"Keine tp-Variable in {filename}")
+            continue
+        lon = ds["longitude"].values
+        lat = ds["latitude"].values
+        lon2d, lat2d = np.meshgrid(lon, lat)
+        data = ds["tp"].isel(step=0).values
+        data[data < 0.1] = np.nan
     elif var_type == "cape_ml":
         if "CAPE_ML" not in ds:
             print(f"Keine CAPE_ML-Variable in {filename}")
             continue
         data = ds["CAPE_ML"].values[0, :, :]
-        data[data < 0] = np.nan
+        data[data<0]=np.nan
     elif var_type == "dbz_cmax":
         if "DBZ_CMAX" not in ds:
             print(f"Keine DBZ_CMAX in {filename}")
             continue
-        dbz_all_steps = ds["DBZ_CMAX"].values
-    
-        # Zeitschritte auswählen und Differenz berechnen
-        dbz_step0 = dbz_all_steps[0, :, :]
-        dbz_step3 = dbz_all_steps[3, :, :]
-        dbz_diff = dbz_step3 - dbz_step0  # Differenz zwischen Step 3 und Step 0
-        dbz_diff[dbz_diff < -100] = np.nan  # Werte < -100 dBZ als fehlend markieren
-    
-        data = dbz_step0
+        data = ds["DBZ_CMAX"].values[0,:,:]
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
 
-    if data.ndim == 3:
-        data = data[0]
+    if data.ndim==3:
+        data=data[0]
 
     lon = ds["longitude"].values
     lat = ds["latitude"].values
@@ -260,10 +268,12 @@ for filename in sorted(os.listdir(data_dir)):
         code2idx = {c: i for i, c in enumerate(codes)}
         idx_data = np.full_like(data, fill_value=np.nan, dtype=float)
         for c,i in code2idx.items():
-            idx_data[data==c] = i
+            idx_data[data==c]=i
         im = ax.pcolormesh(lon, lat, idx_data, cmap=cmap, vmin=-0.5, vmax=len(codes)-0.5, shading="auto")
     elif var_type == "tp":
         im = ax.pcolormesh(lon, lat, data, cmap=prec_colors, norm=prec_norm, shading="auto")
+    elif var_type == "tp_acc":
+        im = ax.pcolormesh(lon2d, lat2d, data, cmap=tp_acc_colors, norm=tp_acc_norm, shading="auto")
     elif var_type == "cape_ml":
         im = ax.pcolormesh(lon, lat, data, cmap=cape_colors, norm=cape_norm, shading="auto")
     elif var_type == "dbz_cmax":
@@ -284,16 +294,18 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende
     legend_h_px = 50
     legend_bottom_px = 45
-    if var_type in ["t2m", "tp", "cape_ml", "dbz_cmax"]:
-        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else cape_bounds if var_type=="cape_ml" else dbz_bounds
+    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax"]:
+        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=bounds)
         cbar.ax.tick_params(colors="black", labelsize=7)
         cbar.outline.set_edgecolor("black")
         cbar.ax.set_facecolor("white")
 
-        if var_type == "tp":
+        if var_type=="tp":
             cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in prec_bounds])
+        if var_type=="tp_acc":
+            cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in tp_acc_bounds])
     else:
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
@@ -302,22 +314,24 @@ for filename in sorted(os.listdir(data_dir)):
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
     footer_texts = {
-    "ww": "Signifikantes Wetter",
-    "t2m": "Temperatur in 2m (in °C)",
-    "tp": "Niederschlag, 1Std (in mm)",
-    "cape_ml": "CAPE-Index (in J/kg)",
-    "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
-}
+        "ww": "Signifikantes Wetter",
+        "t2m": "Temperatur in 2m (in °C)",
+        "tp": "Niederschlag, 1Std (in mm)",
+        "tp_acc": "Niederschlag aufsummiert (in mm)",
+        "cape_ml": "CAPE-Index (in J/kg)",
+        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
+    }
 
     left_text = footer_texts.get(var_type, var_type) + \
                 f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour:02d}z), Deutscher Wetterdienst" \
                 if run_time_utc is not None else \
                 footer_texts.get(var_type, var_type) + "\nICON-D2 (??z), Deutscher Wetterdienst"
-    
+
     footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
     footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
     footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr",
                    fontsize=12, va="top", ha="right", fontweight="bold")
+
     # Speichern
     outname = f"{var_type}_{valid_time_local:%Y%m%d_%H%M}.png"
     plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
