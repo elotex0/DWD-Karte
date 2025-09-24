@@ -110,19 +110,8 @@ cape_norm = mcolors.BoundaryNorm(cape_bounds, cape_colors.N)
 dbz_bounds = np.concatenate(([2, 6], np.arange(6, 74, 2)))
 dbz_bounds = np.unique(dbz_bounds)
 dbz_colors = [
-    "#676767",  # Grau (unverändert, schwächste Echos)
-    "#5DADE2",  # helles Blau
-    "#1E90FF",  # kräftiges Blau
-    "#00FF00",  # sattes Grün
-    "#ADFF2F",  # gelbgrün (Übergang)
-    "#FFFF00",  # Gelb
-    "#FFD700",  # Gold-Gelb
-    "#FFA500",  # Orange
-    "#FF4500",  # Orangerot
-    "#FF0000",  # Rot
-    "#B22222",  # Dunkelrot
-    "#FF00FF",  # Magenta
-    "#8B00FF"   # Violett (extrem stark)
+    "#676767", "#0050A0", "#009966", "#00AA00",
+    "#AAAA00", "#AA5500", "#AA0000", "#550055"
 ]
 dbz_cmap = LinearSegmentedColormap.from_list("dbz_cmap", dbz_colors, N=len(dbz_bounds)-1)
 dbz_norm = BoundaryNorm(dbz_bounds, dbz_cmap.N)
@@ -311,25 +300,19 @@ for filename in sorted(os.listdir(data_dir)):
                               (BOTTOM_AREA_PX - legend_h_px - legend_bottom_px)/FIG_H_PX])
     footer_ax.axis("off")
     footer_texts = {
-    "ww": "Signifikantes Wetter",
-    "t2m": "Temperatur in 2m (in °C)",
-    "tp": "Niederschlag, 1Std (in mm)",
-    "cape_ml": "CAPE-Index (in J/kg)",
-    "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
-}
+        "ww": "Signifikantes Wetter",
+        "t2m": "Temperatur in 2m (in °C)",
+        "tp": "Niederschlag, 1Std (in mm)",
+        "cape_ml": "CAPE-Index (in J/kg)",
+        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
+    }
+    left_text = footer_texts.get(var_type, var_type)
+    left_text += f"\nICON-D2 ({pd.to_datetime(run_time_utc).hour if run_time_utc else '??'}z), Deutscher Wetterdienst"
+    footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
+    footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
+    footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr", fontsize=12, va="top", ha="right", fontweight="bold")
 
-# Stunde mit führender Null formatieren
-hour_str = f"{pd.to_datetime(run_time_utc).hour:02d}" if run_time_utc is not None else "??"
-
-left_text = footer_texts.get(var_type, var_type)
-left_text += f"\nICON-D2 ({hour_str}z), Deutscher Wetterdienst"
-
-footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", ha="left")
-footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
-footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr",
-               fontsize=12, va="top", ha="right", fontweight="bold")
-
-# Speichern
-outname = f"{var_type}_{valid_time_local:%Y%m%d_%H%M}.png"
-plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
-plt.close(fig)
+    # Speichern
+    outname = f"{var_type}_{valid_time_local:%Y%m%d_%H%M}.png"
+    plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
+    plt.close()
