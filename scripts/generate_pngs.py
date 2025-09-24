@@ -328,3 +328,8 @@ footer_ax.text(0.01, 0.85, left_text, fontsize=12, fontweight="bold", va="top", 
 footer_ax.text(0.734, 0.92, "Prognose für:", fontsize=12, va="top", ha="left", fontweight="bold")
 footer_ax.text(0.99, 0.68, f"{valid_time_local:%d.%m.%Y %H:%M} Uhr",
                fontsize=12, va="top", ha="right", fontweight="bold")
+
+# Speichern
+    outname = f"{var_type}_{valid_time_local:%Y%m%d_%H%M}.png"
+    plt.savefig(os.path.join(output_dir, outname), dpi=100, bbox_inches=None, pad_inches=0)
+    plt.close()
