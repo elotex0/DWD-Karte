@@ -130,6 +130,20 @@ dbz_cmap = LinearSegmentedColormap.from_list("dbz_cmap", dbz_colors, N=len(dbz_b
 dbz_norm = BoundaryNorm(dbz_bounds, dbz_cmap.N)
 
 # ------------------------------
+# Windböen-Farben
+# ------------------------------
+wind_bounds = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300]
+wind_colors = ListedColormap([
+    "#68AD05", "#8DC00B", "#B1D415", "#D5E81C", "#FBFC22",
+    "#FAD024", "#F9A427", "#FC7929", "#FB4D2B", "#EA2B57",
+    "#FB22A5", "#FC22CE", "#FC22F5", "#FC62F8", "#FD80F8",
+    "#FFBFFC", "#FEDFFE", "#FEFFFF", "#E1E0FF", "#C3C3FF",
+    "#A5A5FF", "#A5A5FF", "#6868FE"
+])
+wind_norm = mcolors.BoundaryNorm(wind_bounds, wind_colors.N)
+
+
+# ------------------------------
 # Kartenparameter
 # ------------------------------
 FIG_W_PX, FIG_H_PX = 880, 830
@@ -225,6 +239,13 @@ for filename in sorted(os.listdir(data_dir)):
             print(f"Keine DBZ_CMAX in {filename}")
             continue
         data = ds["DBZ_CMAX"].values[0,:,:]
+    elif var_type == "wind":
+        if "max_i10fg" not in ds:
+            print(f"Keine max_i10fg in {filename}")
+            continue
+        data = ds["max_i10fg"].values
+        data[data < 0] = np.nan
+        data = data * 3.6  # m/s → km/h
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
@@ -278,6 +299,8 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, data, cmap=cape_colors, norm=cape_norm, shading="auto")
     elif var_type == "dbz_cmax":
         im = ax.pcolormesh(lon, lat, data, cmap=dbz_cmap, norm=dbz_norm, shading="auto")
+    elif var_type == "wind":
+        im = ax.pcolormesh(lon, lat, data, cmap=wind_colors, norm=wind_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -294,8 +317,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende
     legend_h_px = 50
     legend_bottom_px = 45
-    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax"]:
-        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds
+    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax","wind"]:
+        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds if var_type=="dbz_cmax" else wind_bounds
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=bounds)
         cbar.ax.tick_params(colors="black", labelsize=7)
@@ -319,7 +342,8 @@ for filename in sorted(os.listdir(data_dir)):
         "tp": "Niederschlag, 1Std (in mm)",
         "tp_acc": "Niederschlag aufsummiert (in mm)",
         "cape_ml": "CAPE-Index (in J/kg)",
-        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)"
+        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)",
+        "wind": "Windböen (in km/h)"
     }
 
     left_text = footer_texts.get(var_type, var_type) + \
