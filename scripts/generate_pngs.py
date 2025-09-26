@@ -362,7 +362,7 @@ for filename in sorted(os.listdir(data_dir)):
         "ww": "Signifikantes Wetter",
         "t2m": "Temperatur 2m (°C)",
         "tp": "Niederschlag, 1Std (mm)",
-        "tp_acc": "Niederschlag aufsummiert (mm)",
+        "tp_acc": "Akkumulierter Niederschlag (mm)",
         "cape_ml": "CAPE-Index (J/kg)",
         "dbz_cmax": "Sim. max. Radarreflektivität (dBZ)",
         "wind": "Windböen (km/h)",
