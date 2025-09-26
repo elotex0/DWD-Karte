@@ -67,7 +67,7 @@ ww_categories = {
 # Temperatur-Farben
 # ------------------------------
 t2m_bounds = list(range(-28, 41, 2))
-    t2m_colors = [
+t2m_colors = [
     "#C802CB", "#AA00A9", "#8800AA", "#6600AA", "#4400AB",
     "#2201AA", "#0000CC", "#0033CC", "#0044CB", "#0055CC",
     "#0066CB", "#0076CD", "#0088CC", "#0099CB", "#00A5CB",
@@ -77,8 +77,8 @@ t2m_bounds = list(range(-28, 41, 2))
     "#91002B", "#980065", "#BB0099", "#EE01AB", "#FF21FE"
 ]
 
-    t2m_cmap = ListedColormap(t2m_colors)
-    t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
+t2m_cmap = ListedColormap(t2m_colors)
+t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 # ------------------------------
 # Niederschlags-Farben 1h (tp)
