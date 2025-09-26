@@ -157,6 +157,17 @@ snow_colors = ListedColormap([
     ])
 snow_norm = mcolors.BoundaryNorm(snow_bounds, snow_colors.N)
 
+#-------------------------------
+#Gesamtbewölkung-Farben
+#------------------------------
+# Farbskala für Gesamtbewölkung
+cloud_bounds = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]  # in cm
+cloud_colors = ListedColormap([
+    "#FFFF00", "#EEEE0B", "#DDDD17", "#CCCC22", "#BBBB2E",
+    "#ABAB39", "#9A9A45", "#898950", "#78785C", "#676767"
+])
+cloud_norm = mcolors.BoundaryNorm(cloud_bounds, cloud_colors.N)
+
 # ------------------------------
 # Kartenparameter
 # ------------------------------
@@ -266,6 +277,12 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         data = ds["sde"].values
         data[data < 0] = np.nan
+    elif var_type == "cloud":
+        if "CLCT" not in ds:
+            print(f"Keine CLCT-Variable in {filename}")
+            continue
+        data = ds["CLCT"].values
+        data[data < 0] = np.nan
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
@@ -323,6 +340,8 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, data, cmap=wind_colors, norm=wind_norm, shading="auto")
     elif var_type == "snow":
         im = ax.pcolormesh(lon, lat, data, cmap=snow_colors, norm=snow_norm, shading="auto")
+    elif var_type == "cloud":
+        im = ax.pcolormesh(lon, lat, data, cmap=cloud_colors, norm=cloud_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -339,8 +358,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende
     legend_h_px = 50
     legend_bottom_px = 45
-    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax","wind","snow"]:
-        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds if var_type=="dbz_cmax" else wind_bounds if var_type=="wind" else snow_bounds
+    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax","wind","snow", "cloud"]:
+        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds if var_type=="dbz_cmax" else wind_bounds if var_type=="wind" else snow_bounds if var_type=="snow" else cloud_bounds
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=bounds)
         cbar.ax.tick_params(colors="black", labelsize=7)
@@ -351,6 +370,8 @@ for filename in sorted(os.listdir(data_dir)):
             cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in prec_bounds])
         if var_type=="tp_acc":
             cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in tp_acc_bounds])
+        if var_type=="snow":
+            cbar.set_ticklabels([int(tick) if float(tick).is_integer() else tick for tick in snow_bounds])
     else:
         add_ww_legend_bottom(fig, ww_categories, ww_colors_base)
 
@@ -365,6 +386,7 @@ for filename in sorted(os.listdir(data_dir)):
         "tp_acc": "Akkumulierter Niederschlag (mm)",
         "cape_ml": "CAPE-Index (J/kg)",
         "dbz_cmax": "Sim. max. Radarreflektivität (dBZ)",
+        "cloud": "Gesamtbewölkung (%)",
         "wind": "Windböen (km/h)",
         "snow": "Schneehöhe (cm)"
     }
