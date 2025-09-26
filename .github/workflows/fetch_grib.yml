@@ -134,6 +134,18 @@ jobs:
               bunzip2 -f snow_${i_padded}.grib2.bz2
             fi
           '
+      - name: Download clct GRIB2 files
+        run: |
+          mkdir -p data/cloud
+          cd data/cloud
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
+            i_padded=$(printf "%03d" {} )
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/clct/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_clct.grib2.bz2"
+            wget -O cloud_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "cloud_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f cloud_${i_padded}.grib2.bz2
+            fi
+          '
 
       - name: Remove old PNGs of current RUN from repo
         run: |
@@ -149,6 +161,7 @@ jobs:
           mkdir -p icond2/${{ env.RUN }}/dbz_cmax
           mkdir -p icond2/${{ env.RUN }}/wind
           mkdir -p icond2/${{ env.RUN }}/snow
+          mkdir -p icond2/${{ env.RUN }}/cloud
 
           python scripts/generate_pngs.py data/t2m icond2/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww icond2/${{ env.RUN }}/ww ww
@@ -158,6 +171,7 @@ jobs:
           python scripts/generate_pngs.py data/dbz_cmax icond2/${{ env.RUN }}/dbz_cmax dbz_cmax
           python scripts/generate_pngs.py data/wind icond2/${{ env.RUN }}/wind wind
           python scripts/generate_pngs.py data/snow icond2/${{ env.RUN }}/snow snow
+          python scripts/generate_pngs.py data/cloud icond2/${{ env.RUN }}/cloud cloud
       - name: Commit PNGs
         run: |
           git config user.name "github-actions"
@@ -171,6 +185,7 @@ jobs:
           git add icond2/${{ env.RUN }}/dbz_cmax/* || true
           git add icond2/${{ env.RUN }}/wind/* || true
           git add icond2/${{ env.RUN }}/snow/* || true
+          git add icond2/${{ env.RUN }}/cloud/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
