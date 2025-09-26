@@ -232,7 +232,7 @@ for filename in sorted(os.listdir(data_dir)):
             continue
         tp_all = ds[tp_var].values
         data = tp_all[3]-tp_all[0] if tp_all.shape[0]>1 else tp_all[0]
-        data[data<0.01]=np.nan
+        data[data<0.1]=np.nan
     elif var_type == "tp_acc":
         if "tp" not in ds:
             print(f"Keine tp-Variable in {filename}")
