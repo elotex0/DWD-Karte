@@ -66,17 +66,19 @@ ww_categories = {
 # ------------------------------
 # Temperatur-Farben
 # ------------------------------
-t2m_bounds = list(range(-20, 41, 2))
-t2m_colors = [
-    "#000080", "#0010A8", "#0020D0", "#0030F8", "#0050FF",
-    "#007FFF", "#00AFFF", "#00DFFF", "#00FFBF", "#00FF9F",
-    "#00FF7F", "#30FF60", "#60FF40", "#90FF20", "#BFFF00",
-    "#E0FF00", "#FFFF00", "#FFE000", "#FFC000", "#FFA000",
-    "#FF8000", "#FF6000", "#FF4000", "#FF2000", "#FF0000",
-    "#E00000", "#C00000", "#A00000", "#800000", "#600000"
+t2m_bounds = list(range(-28, 41, 2))
+    t2m_colors = [
+    "#C802CB", "#AA00A9", "#8800AA", "#6600AA", "#4400AB",
+    "#2201AA", "#0000CC", "#0033CC", "#0044CB", "#0055CC",
+    "#0066CB", "#0076CD", "#0088CC", "#0099CB", "#00A5CB",
+    "#00BB22", "#11C501", "#32D500", "#77D600", "#87DD00",
+    "#FFCC00", "#FFBB00", "#FFAA01", "#FE9900", "#FF8800",
+    "#FF6600", "#FF3300", "#FE0000", "#DC0000", "#BA0100",
+    "#91002B", "#980065", "#BB0099", "#EE01AB", "#FF21FE"
 ]
-t2m_cmap = ListedColormap(t2m_colors)
-t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
+
+    t2m_cmap = ListedColormap(t2m_colors)
+    t2m_norm = mcolors.BoundaryNorm(t2m_bounds, t2m_cmap.N)
 
 # ------------------------------
 # Niederschlags-Farben 1h (tp)
