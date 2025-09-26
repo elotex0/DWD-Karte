@@ -137,40 +137,40 @@ jobs:
 
       - name: Remove old PNGs of current RUN from repo
         run: |
-          git rm -r --ignore-unmatch pngs/${{ env.RUN }} || true
+          git rm -r --ignore-unmatch icond2/${{ env.RUN }} || true
 
       - name: Generate PNGs
         run: |
-          mkdir -p pngs/${{ env.RUN }}/t2m
-          mkdir -p pngs/${{ env.RUN }}/ww
-          mkdir -p pngs/${{ env.RUN }}/tp
-          mkdir -p pngs/${{ env.RUN }}/tp_acc
-          mkdir -p pngs/${{ env.RUN }}/cape_ml
-          mkdir -p pngs/${{ env.RUN }}/dbz_cmax
-          mkdir -p pngs/${{ env.RUN }}/wind
-          mkdir -p pngs/${{ env.RUN }}/snow
+          mkdir -p icond2/${{ env.RUN }}/t2m
+          mkdir -p icond2/${{ env.RUN }}/ww
+          mkdir -p icond2/${{ env.RUN }}/tp
+          mkdir -p icond2/${{ env.RUN }}/tp_acc
+          mkdir -p icond2/${{ env.RUN }}/cape_ml
+          mkdir -p icond2/${{ env.RUN }}/dbz_cmax
+          mkdir -p icond2/${{ env.RUN }}/wind
+          mkdir -p icond2/${{ env.RUN }}/snow
 
-          python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
-          python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
-          python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp tp
-          python scripts/generate_pngs.py data/tp pngs/${{ env.RUN }}/tp_acc tp_acc
-          python scripts/generate_pngs.py data/cape_ml pngs/${{ env.RUN }}/cape_ml cape_ml
-          python scripts/generate_pngs.py data/dbz_cmax pngs/${{ env.RUN }}/dbz_cmax dbz_cmax
-          python scripts/generate_pngs.py data/wind pngs/${{ env.RUN }}/wind wind
-          python scripts/generate_pngs.py data/snow pngs/${{ env.RUN }}/snow snow
+          python scripts/generate_pngs.py data/t2m icond2/${{ env.RUN }}/t2m t2m
+          python scripts/generate_pngs.py data/ww icond2/${{ env.RUN }}/ww ww
+          python scripts/generate_pngs.py data/tp icond2/${{ env.RUN }}/tp tp
+          python scripts/generate_pngs.py data/tp icond2/${{ env.RUN }}/tp_acc tp_acc
+          python scripts/generate_pngs.py data/cape_ml icond2/${{ env.RUN }}/cape_ml cape_ml
+          python scripts/generate_pngs.py data/dbz_cmax icond2/${{ env.RUN }}/dbz_cmax dbz_cmax
+          python scripts/generate_pngs.py data/wind icond2/${{ env.RUN }}/wind wind
+          python scripts/generate_pngs.py data/snow icond2/${{ env.RUN }}/snow snow
       - name: Commit PNGs
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          git add pngs/${{ env.RUN }}/t2m/* || true
-          git add pngs/${{ env.RUN }}/ww/* || true
-          git add pngs/${{ env.RUN }}/tp/* || true
-          git add pngs/${{ env.RUN }}/tp_acc/* || true
-          git add pngs/${{ env.RUN }}/cape_ml/* || true
-          git add pngs/${{ env.RUN }}/dbz_cmax/* || true
-          git add pngs/${{ env.RUN }}/wind/* || true
-          git add pngs/${{ env.RUN }}/snow/* || true
+          git add icond2/${{ env.RUN }}/t2m/* || true
+          git add icond2/${{ env.RUN }}/ww/* || true
+          git add icond2/${{ env.RUN }}/tp/* || true
+          git add icond2/${{ env.RUN }}/tp_acc/* || true
+          git add icond2/${{ env.RUN }}/cape_ml/* || true
+          git add icond2/${{ env.RUN }}/dbz_cmax/* || true
+          git add icond2/${{ env.RUN }}/wind/* || true
+          git add icond2/${{ env.RUN }}/snow/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
