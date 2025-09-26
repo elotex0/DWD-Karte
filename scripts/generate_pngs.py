@@ -144,6 +144,18 @@ wind_colors = ListedColormap([
 ])
 wind_norm = mcolors.BoundaryNorm(wind_bounds, wind_colors.N)
 
+#-------------------------------
+# Schneehöhen-Farben
+#------------------------------
+# Farbskala für Schneehöhe
+snow_bounds = [0, 0.5, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30, 40, 50, 60, 70, 80, 100, 150, 200, 250, 300, 400]  # in cm
+snow_colors = ListedColormap([
+        "#F8F8F8", "#DCDBFA", "#AAA9C8", "#75BAFF", "#349AFF", "#0682FF",
+        "#0069D2", "#004F9C", "#01327F", "#4B007F", "#64007F", "#9101BB",
+        "#C300FC", "#D235FF", "#EBA6FF", "#F4CEFF", "#FAB2CA", "#FF9798",
+        "#FE6E6E", "#DF093F", "#BE0000", "#A40000", "#880000"
+    ])
+snow_norm = mcolors.BoundaryNorm(snow_bounds, snow_colors.N)
 
 # ------------------------------
 # Kartenparameter
@@ -248,6 +260,12 @@ for filename in sorted(os.listdir(data_dir)):
         data = ds["max_i10fg"].values
         data[data < 0] = np.nan
         data = data * 3.6  # m/s → km/h
+    elif var_type == "snow":
+        if "sde" not in ds:
+            print(f"Keine sde-Variable in {filename}")
+            continue
+        data = ds["sde"].values
+        data[data < 0] = np.nan
     else:
         print(f"Unbekannter var_type {var_type}")
         continue
@@ -303,6 +321,8 @@ for filename in sorted(os.listdir(data_dir)):
         im = ax.pcolormesh(lon, lat, data, cmap=dbz_cmap, norm=dbz_norm, shading="auto")
     elif var_type == "wind":
         im = ax.pcolormesh(lon, lat, data, cmap=wind_colors, norm=wind_norm, shading="auto")
+    elif var_type == "snow":
+        im = ax.pcolormesh(lon, lat, data, cmap=snow_colors, norm=snow_norm, shading="auto")
 
     # Bundesländer & Städte
     bundeslaender.boundary.plot(ax=ax, edgecolor="black", linewidth=1)
@@ -319,8 +339,8 @@ for filename in sorted(os.listdir(data_dir)):
     # Legende
     legend_h_px = 50
     legend_bottom_px = 45
-    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax","wind"]:
-        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds if var_type=="dbz_cmax" else wind_bounds
+    if var_type in ["t2m","tp","tp_acc","cape_ml","dbz_cmax","wind","snow"]:
+        bounds = t2m_bounds if var_type=="t2m" else prec_bounds if var_type=="tp" else tp_acc_bounds if var_type=="tp_acc" else cape_bounds if var_type=="cape_ml" else dbz_bounds if var_type=="dbz_cmax" else wind_bounds if var_type=="wind" else snow_bounds
         cbar_ax = fig.add_axes([0.03, legend_bottom_px / FIG_H_PX, 0.94, legend_h_px / FIG_H_PX])
         cbar = fig.colorbar(im, cax=cbar_ax, orientation="horizontal", ticks=bounds)
         cbar.ax.tick_params(colors="black", labelsize=7)
@@ -340,12 +360,13 @@ for filename in sorted(os.listdir(data_dir)):
     footer_ax.axis("off")
     footer_texts = {
         "ww": "Signifikantes Wetter",
-        "t2m": "Temperatur in 2m (in °C)",
-        "tp": "Niederschlag, 1Std (in mm)",
-        "tp_acc": "Niederschlag aufsummiert (in mm)",
-        "cape_ml": "CAPE-Index (in J/kg)",
-        "dbz_cmax": "Sim. max. Radarreflektivität (in dBZ)",
-        "wind": "Windböen (in km/h)"
+        "t2m": "Temperatur 2m (°C)",
+        "tp": "Niederschlag, 1Std (mm)",
+        "tp_acc": "Niederschlag aufsummiert (mm)",
+        "cape_ml": "CAPE-Index (J/kg)",
+        "dbz_cmax": "Sim. max. Radarreflektivität (dBZ)",
+        "wind": "Windböen (km/h)",
+        "snow": "Schneehöhe (cm)"
     }
 
     left_text = footer_texts.get(var_type, var_type) + \
