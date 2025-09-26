@@ -122,6 +122,18 @@ jobs:
               bunzip2 -f wind_${i_padded}.grib2.bz2
             fi
           '
+      - name: Download sde GRIB2 files
+        run: |
+          mkdir -p data/snow
+          cd data/snow
+          seq 0 47 | xargs -n 1 -P 12 -I{} bash -c '
+            i_padded=$(printf "%03d" {} )
+            URL="https://opendata.dwd.de/weather/nwp/icon-d2/grib/${{ env.RUN }}/sde/icon-d2_germany_regular-lat-lon_single-level_${{ env.DATE }}${{ env.RUN }}_${i_padded}_2d_h_snow.grib2.bz2"
+            wget -O snow_${i_padded}.grib2.bz2 "$URL" || echo "Datei $URL nicht verfügbar, überspringe..."
+            if [ -f "snow_${i_padded}.grib2.bz2" ]; then
+              bunzip2 -f snow_${i_padded}.grib2.bz2
+            fi
+          '
 
       - name: Remove old PNGs of current RUN from repo
         run: |
@@ -136,6 +148,7 @@ jobs:
           mkdir -p pngs/${{ env.RUN }}/cape_ml
           mkdir -p pngs/${{ env.RUN }}/dbz_cmax
           mkdir -p pngs/${{ env.RUN }}/wind
+          mkdir -p pngs/${{ env.RUN }}/snow
 
           python scripts/generate_pngs.py data/t2m pngs/${{ env.RUN }}/t2m t2m
           python scripts/generate_pngs.py data/ww pngs/${{ env.RUN }}/ww ww
@@ -144,7 +157,7 @@ jobs:
           python scripts/generate_pngs.py data/cape_ml pngs/${{ env.RUN }}/cape_ml cape_ml
           python scripts/generate_pngs.py data/dbz_cmax pngs/${{ env.RUN }}/dbz_cmax dbz_cmax
           python scripts/generate_pngs.py data/wind pngs/${{ env.RUN }}/wind wind
-
+          python scripts/generate_pngs.py data/snow pngs/${{ env.RUN }}/snow snow
       - name: Commit PNGs
         run: |
           git config user.name "github-actions"
@@ -157,7 +170,7 @@ jobs:
           git add pngs/${{ env.RUN }}/cape_ml/* || true
           git add pngs/${{ env.RUN }}/dbz_cmax/* || true
           git add pngs/${{ env.RUN }}/wind/* || true
-
+          git add pngs/${{ env.RUN }}/snow/* || true
 
           git commit -m "Update ICON-D2 run ${{ env.RUN }} for ${{ env.DATE }}" || echo "Keine Änderungen zum Commit"
           git push
